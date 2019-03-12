@@ -1,0 +1,5 @@
+Go ahead with the 8-bit Gameboy CPU  emulation, but add one more
+feature after the emulation is done. That is, create/design a version
+of the architecture which has a two-stage pipeline (stage one:
+fetch/decode; stage two: execute/writeback). This is similar to the
+AVR.
