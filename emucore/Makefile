@@ -1,4 +1,4 @@
-OBJS = cpu.o mem.o
+OBJS = cpu.o mem.o insn.o timer.o
 
 %.o: %.c
 	$(CC) -c $< $(CFLAGS)
