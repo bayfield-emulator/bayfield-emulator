@@ -1,6 +1,6 @@
 /* 
 WINDOW.CPP
-NICK WILSON
+NICK
 2019
 */
 

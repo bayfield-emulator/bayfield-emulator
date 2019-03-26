@@ -1,6 +1,6 @@
 /* 
 WINDOW.H
-NICK WILSON
+NICK
 2019
 */
 
