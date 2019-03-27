@@ -17,21 +17,20 @@ NICK
 // constructor
 GPU::GPU() {
 	VRAM = (uint8_t *) malloc(sizeof(uint8_t) * 8 * KB);
-	BG_MAP = (uint8_t *) malloc(sizeof(uint8_t) * 32 * 32);
-	memset(BG_MAP, 0xFF, (sizeof(uint8_t) * 32 * 32));
 	// BG_BUFFER = (uint32_t *) malloc(sizeof(uint32_t) * 256 * 256); // IF YOU RE-ENABLE THIS... (SEE DESTRUCTOR)
 	TILES_BG = VRAM;
-	TILES_SPRITES = VRAM + (4 * KB); //TODO: offset should be adjustable based on register setting
+	TILES_SPRITES = VRAM + (4 * KB);
+	BG_MAP = VRAM + (12 * KB);
+	memset(BG_MAP, 0xFF, (sizeof(uint8_t) * 32 * 32));
 }
 
 // destructor
 GPU::~GPU() {
 	free(VRAM);
-	free(BG_MAP);
 	// free(BG_BUFFER); //... RE-ENABLE THIS TOO
 }
 
-// initialize the GPU with a pointer to Window->Surface->Pixels
+//initialize the GPU with a pointer to Window->Surface->Pixels
 void GPU::init(uint32_t* ptr_to_win_memory) {
 	WINDOW_MEMORY = ptr_to_win_memory;
 }
@@ -52,7 +51,7 @@ void GPU::setWindowBufferAddress(uint32_t* buf_addr) {
 	memset(WINDOW_BUFFER, 0x00FFFFFF, (sizeof(uint32_t) * 256 * 256));
 }
 
-// add a tile to the background area of VRAM
+//add a tile to the background area of VRAM
 void GPU::add_bg_tile(int id, uint8_t* tile) {
 	uint8_t* dest = TILES_BG + id * TILE_SIZE;
 	memcpy((void *) dest, (void *) tile, TILE_SIZE);
@@ -126,13 +125,24 @@ void GPU::draw_bg() {
 
 //assemble all buffers and produce final frame
 void GPU::render() {
-	for (int y = 0; y < 144; y++) {
-		for (int x = 0; x < 160; x++) {
+	for (uint8_t y = 0; y < 144; y++) {
+		for (uint8_t x = 0; x < 160; x++) {
+
+			// calculate shifts
+			uint8_t shifted_x = (x + GPU_REG_SCROLLX); //no mod required as 8 bit numbers overflow at/underflow to
+			uint8_t shifted_y = (y + GPU_REG_SCROLLY); //256, exactly the place where mod would be required
+
 			// copy background buffer over
-			WINDOW_MEMORY[x + GPU_REG_SCROLLX + 160 * (y + GPU_REG_SCROLLY)] = BG_BUFFER[x + 256 * y];
+			WINDOW_MEMORY[x + 160 * y] = BG_BUFFER[shifted_x + 256 * shifted_y];
 		}
-		// H-BLANK
+		/* H-BLANK */
 	}
-	// V-BLANK
+	/* V-BLANK */
 }
 
+/* TODO */
+// Sprite memory offset should be adjustable based on register setting
+// Interrupts
+// Sprite rendering
+// Window rendering
+// Finish registers

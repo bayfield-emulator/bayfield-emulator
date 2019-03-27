@@ -18,8 +18,8 @@ class GPU {
 	private:
 		uint8_t GPU_REG_LCD_CONTROL = 0;
 		uint8_t GPU_REG_LCD_STATUS = 0;
-		int8_t GPU_REG_SCROLLY = 0;
-		int8_t GPU_REG_SCROLLX = 0;
+		uint8_t GPU_REG_SCROLLY = 0;
+		uint8_t GPU_REG_SCROLLX = 0;
 		uint8_t GPU_REG_WINDOWY = 0;
 		uint8_t GPU_REG_WINDOWX = 0;
 
