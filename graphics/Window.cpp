@@ -68,6 +68,13 @@ void* Window::getPixels() {
 }
 
 /*
+Useful for dumping surface to either debug or save the contents.
+*/
+SDL_Surface* Window::getSurface() {
+	return surface;
+}
+
+/*
 Set the colour. When clear() is called, this is the colour that will be used, for example.
 */
 void Window::setColour(int r, int g, int b, int flags) {
