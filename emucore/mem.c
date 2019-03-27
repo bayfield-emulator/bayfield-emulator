@@ -2,7 +2,7 @@
 #include <string.h>
 #include "emucore.h"
 
-#define ALL_RAM_SIZE (8192 * 3 + 160 + 128)
+#define ALL_RAM_SIZE 32768
 #define DEFAULT_OBSERVER (bc_mmio_observe_t)0x1
 #define DEFAULT_FETCHER (bc_mmio_fetch_t)0x1
 
@@ -10,10 +10,10 @@ void bc_mmap_alloc(cpu_mmap_t *target) {
     uint8_t *ram = calloc(1, ALL_RAM_SIZE);
     target->all_ram = ram;
     target->vram = ram;
-    target->wram = ram + 8192;
-    target->extram = ram + 16384;
-    target->sprite = ram + 24576;
-    target->zpg = ram + 24576 + 160;
+    target->extram = ram + 0x2000;
+    target->wram = ram + 0x4000;
+    target->sprite = ram + 0x7e00;
+    target->zpg = ram + 0x7f80;
 }
 
 void bc_mmap_take_rom(cpu_mmap_t *mmap, cartridge_t *rom) {
@@ -29,6 +29,18 @@ void bc_mmap_add_mmio_observer(cpu_mmap_t *mmap, uint16_t addr, bc_mmio_observe_
     mmap->observers[slot].set = write_proc? write_proc : DEFAULT_OBSERVER;
 }
 
+uint8_t *bc_mmap_calc(cpu_mmap_t *mem, uint16_t addr) {
+    if (addr < 0x4000) {
+        return mem->rom->bank1 + addr;
+    } else if (addr < 0x8000) {
+        return mem->rom->bank1 + (addr - 0x4000);
+    } else if (addr < 0xFE00 && addr >= 0xE000) {
+        return mem->wram + (addr - 0xE000);
+    } else {
+        return mem->all_ram + (addr - 0x8000);
+    }
+}
+
 uint8_t bc_mmap_getvalue(cpu_mmap_t *mmap, uint16_t addr) {
     if (addr >= 0xFF00 && addr <= 0xFF7F) {
         int slot = addr - 0xFF00;
@@ -41,7 +53,14 @@ uint8_t bc_mmap_getvalue(cpu_mmap_t *mmap, uint16_t addr) {
         }
     }
 
-    return mmap->all_ram[addr];
+    /* this is the interrupt mask register, outside of normal MMIO space.
+     * We combine the master interrupt enable and the mask registers, so remove if_master
+     * before returning to program. */
+    if (addr == 0xFFFF) {
+        return mmap->cpu->irq_mask & (~IF_MASTER);
+    }
+
+    return *bc_mmap_calc(mmap, addr);
 }
 void bc_mmap_putvalue(cpu_mmap_t *mmap, uint16_t addr, uint8_t value) {
     if (addr >= 0xFF00 && addr <= 0xFF7F) {
@@ -55,7 +74,16 @@ void bc_mmap_putvalue(cpu_mmap_t *mmap, uint16_t addr, uint8_t value) {
         }
     }
 
-    mmap->all_ram[addr] = value;
+    /* Make sure to save the master flag */
+    if (addr == 0xFFFF) {
+        mmap->cpu->irq_mask = value | (mmap->cpu->irq_mask & IF_MASTER);
+    }
+
+    if (addr < 0x8000) {
+        panic("write to rom region 0x%llx", addr);
+    }
+
+    *bc_mmap_calc(mmap, addr) = value;
 }
 
 void bc_mmap_release(cpu_mmap_t *target) {

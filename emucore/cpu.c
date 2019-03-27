@@ -2,6 +2,7 @@
 #include <string.h>
 #include "emucore.h"
 #include "emucore_internal.h"
+#include "insn.h"
 
 #define MMIO_INT_FLAG_INDEX 0x0F
 #define CLOCKS_PER_SEC 4194304
@@ -40,8 +41,100 @@ void bc_request_interrupt(bc_cpu_t *cpu, enum bc_int_flag interrupt) {
     cpu->irqs |= interrupt;
 } 
 
+static int goto_isr_if_allowed(bc_cpu_t *cpu, enum bc_int_flag flg) {
+    if (cpu->irqs & flg) {
+        cpu->irqs &= (~flg);
+        if (!(cpu->irq_mask & flg)) {
+            debug_log("dropped irq %d because cpu disabled", flg);
+            return 0;
+        }
+        // moving PC to isr takes 20 clocks/5 machs
+        cpu->cycles_for_stall = 20;
+        // disable further interrupts
+        cpu->irq_mask &= ~IF_MASTER;
+        // push pc onto stack and go to ISR
+        bc_mmap_putvalue(&cpu->mem, cpu->regs.SP, cpu->regs.PC & 0xff);
+        bc_mmap_putvalue(&cpu->mem, cpu->regs.SP - 1, cpu->regs.PC >> 8);
+        cpu->regs.PC = 0x0040;
+        return 1;
+    }
+    return 0;
+}
+
+static int do_interrupts(bc_cpu_t *cpu, int budget) {
+    if (!(cpu->irq_mask & IF_MASTER)) {
+        cpu->irq_mask &= IF_MASTER;
+        debug_log("interrupts disabled - doing nothing!");
+        return 0;
+    }
+
+    if (goto_isr_if_allowed(cpu, IF_VBLANK)) return 1;
+    if (goto_isr_if_allowed(cpu, IF_LCDSTAT)) return 1;
+    if (goto_isr_if_allowed(cpu, IF_TIMER)) return 1;
+    if (goto_isr_if_allowed(cpu, IF_SERIAL)) return 1; 
+    if (goto_isr_if_allowed(cpu, IF_JOYPAD)) return 1;
+    return 0;
+}
+
+static void fetch_current_instruction(bc_cpu_t *cpu) {
+    uint8_t *insn_loc = bc_mmap_calc(&cpu->mem, cpu->regs.PC);
+    uint8_t op = *insn_loc;
+    insn_desc_t *t = &instructions[op];
+    uint16_t param = 0;
+    switch (t->param_count) {
+    case 2:
+        param = insn_loc[1] | (insn_loc[2] << 8); break;
+    case 1:
+        param = insn_loc[1]; break;
+    case 0:
+        break;
+    default:
+        panic("only two param bytes are supported - opcode %x has %d", op, t->param_count);
+    }
+    cpu->current_instruction = t;
+    cpu->instruction_param = param;
+}
+
+static int do_instruction(bc_cpu_t *cpu, int budget) {
+    insn_desc_t *t = cpu->current_instruction;
+    uint16_t param = cpu->instruction_param;
+    if (t->ncycles <= budget) {
+        cpu->regs.PC += t->param_count;
+        t->executor(cpu, t->opcode, 0, param);
+        return budget - t->ncycles;
+    } else {
+        // Save for later
+        return t->ncycles - budget;
+    }
+}
+
 void bc_cpu_step(bc_cpu_t *cpu, int ncycles) {
-    panic("unimplemented :(");
+    int clocks = ncycles * 4;
+    while (clocks) {
+        debug_log("proc loop: starting with %d budget", clocks);
+        if (cpu->cycles_for_stall) {
+            clocks -= cpu->cycles_for_stall;
+            if (clocks < 0) {
+                cpu->cycles_for_stall = -clocks;
+            } else {
+                cpu->cycles_for_stall = 0;
+            }
+            debug_log("stall did complete");
+            continue;
+        }
+
+        if (do_interrupts(cpu, clocks)) {
+            continue;
+        }
+        fetch_current_instruction(cpu);
+        clocks = do_instruction(cpu, clocks);
+
+        if (clocks < 0) {
+            debug_log("Ran out of time so we have to save this inst for next call to bc_step");
+            cpu->cycles_for_stall = -clocks;
+            break;
+        }
+    }
 }
 
 void bc_cpu_reset(bc_cpu_t *cpu) {
@@ -59,6 +152,7 @@ void bc_cpu_reset(bc_cpu_t *cpu) {
     bc_mmap_putvalue(&cpu->mem, 0xFF06, 0); // timer mod: 0
     bc_mmap_putvalue(&cpu->mem, 0xFF07, 0); // timer ctl: 4.096khz
 
+#if 0
     bc_mmap_putvalue(&cpu->mem, 0xFF10, 0x80); 
     bc_mmap_putvalue(&cpu->mem, 0xFF11, 0xBF); 
     bc_mmap_putvalue(&cpu->mem, 0xFF12, 0xF3); 
@@ -77,6 +171,7 @@ void bc_cpu_reset(bc_cpu_t *cpu) {
     bc_mmap_putvalue(&cpu->mem, 0xFF24, 0x77); 
     bc_mmap_putvalue(&cpu->mem, 0xFF25, 0xF3); 
     bc_mmap_putvalue(&cpu->mem, 0xFF26, 0xF1); 
+#endif
 }
 
 void bc_cpu_release(bc_cpu_t *cpu) {

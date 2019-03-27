@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include "emucore/emucore.h"
 
 static bc_cpu_t *global_cpu;
@@ -33,7 +34,19 @@ void panic(const char *fmt, ...) {
 }
 
 int main(int argc, char const *argv[]) {
+    int fd = open(argv[1], O_RDONLY);
+    if (!fd) {
+        fputs("Usage: cputest <rom file>", stderr);
+        return 1;
+    }
+    cartridge_t *rom_memory = malloc(sizeof(cartridge_t) + 32767);
+    read(fd, rom_memory + 1, 32767);
+    rom_memory->image_size = 32767;
+    rom_memory->bank1 = rom_memory + 1;
+    rom_memory->bankx = (uint8_t *)(rom_memory + 1) + 16384;
+
     global_cpu = bc_cpu_init();
+    bc_mmap_take_rom(&global_cpu->mem, rom_memory);
     bc_cpu_reset(global_cpu);
 
     while (!global_cpu->stop) {

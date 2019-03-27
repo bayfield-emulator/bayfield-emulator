@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include <stdio.h>
+
+#define debug_log(s, ...) (printf("(debug) in %s (%s:%d):" s "\n", __func__, __FILE__, __LINE__, ##__VA_ARGS__))
 
 typedef struct instruction insn_desc_t;
 typedef struct cart cartridge_t;
@@ -30,6 +33,7 @@ typedef struct lr35902_regs {
     uint16_t PC;
 } cpu_regs_t;
 
+/* write_val: value given by program code - you can return a different value to save to the register. */
 typedef uint8_t (*bc_mmio_observe_t)(bc_cpu_t *cpu, uint16_t addr, uint8_t write_val);
 typedef uint8_t (*bc_mmio_fetch_t)(bc_cpu_t *cpu, uint16_t addr, uint8_t saved_val);
 
@@ -53,11 +57,14 @@ typedef struct lr35902 {
     cpu_regs_t regs;
     cpu_mmap_t mem;
     insn_desc_t *current_instruction;
+    uint16_t instruction_param;
     /* Cycles leftover for current ISR.
      * It takes 5 machine cycles to start executing an ISR. */
     uint32_t cycles_for_irq;
     /* Cycles leftover for current instruction. */
     uint32_t cycles_for_insn;
+    /* Stall after executing current instruction, for branches, etc. */
+    uint32_t cycles_for_stall;
 
     uint32_t current_clock;
     uint32_t timer_last_clock;
@@ -72,6 +79,8 @@ typedef struct lr35902 {
     /* soft halt: when the HALT instruction is executed, no processing is done until the next irq */
     uint8_t halt;
     uint8_t irqs;
+    /* Controls the interrupts that can be delivered, the top bit (unused on GB) is the global enable bit */
+    uint8_t irq_mask;
 } bc_cpu_t;
 
 /* ==== CPU ======================================================================= */
@@ -80,12 +89,13 @@ extern void panic(const char *, ...) __attribute__((noreturn));
 
 bc_cpu_t *bc_cpu_init(void);
 void bc_cpu_release(bc_cpu_t *target);
-/* Run the cpu for the specified number of machine cycles. */
+/* Run the cpu for the specified number of machine cycles.
+   FIXME: maybe should be clock cycles, since all other CPU code is based around clocks */
 void bc_cpu_step(bc_cpu_t *cpu, int ncycles);
 /* Reset the system, including regs and mmap */
 void bc_cpu_reset(bc_cpu_t *cpu);
 
-enum bc_int_flag { IF_VBLANK = 1, IF_LCDSTAT = 2, IF_TIMER = 4, IF_SERIAL = 8, IF_JOYPAD = 16 };
+enum bc_int_flag { IF_VBLANK = 1, IF_LCDSTAT = 2, IF_TIMER = 4, IF_SERIAL = 8, IF_JOYPAD = 16, IF_MASTER = 0x80 };
 /* Request an interrupt. */
 void bc_request_interrupt(bc_cpu_t *cpu, enum bc_int_flag interrupt);
 
@@ -110,9 +120,9 @@ static inline void bc_regs_putpairvalue(cpu_regs_t *regs, int pair, uint16_t val
 }
 
 #define FLAG_CARRY      (1 << 4)
-#define FLAG_HALF_CARRY (1 << 4)
-#define FLAG_NEGATIVE   (1 << 4)
-#define FLAG_ZERO       (1 << 4)
+#define FLAG_HALF_CARRY (1 << 5)
+#define FLAG_NEGATIVE   (1 << 6)
+#define FLAG_ZERO       (1 << 7)
 static inline int bc_regs_test_cpsr_flag(cpu_regs_t *regs, int flag) {
     return !!(regs->CPSR & flag);
 }
