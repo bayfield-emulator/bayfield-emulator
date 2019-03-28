@@ -53,8 +53,7 @@ static int goto_isr_if_allowed(bc_cpu_t *cpu, enum bc_int_flag flg) {
         // disable further interrupts
         cpu->irq_mask &= ~IF_MASTER;
         // push pc onto stack and go to ISR
-        bc_mmap_putvalue(&cpu->mem, cpu->regs.SP, cpu->regs.PC & 0xff);
-        bc_mmap_putvalue(&cpu->mem, cpu->regs.SP - 1, cpu->regs.PC >> 8);
+        bc_mmap_putstack16(&cpu->mem, cpu->regs.PC);
         cpu->regs.PC = 0x0040;
         return 1;
     }

@@ -86,6 +86,20 @@ void bc_mmap_putvalue(cpu_mmap_t *mmap, uint16_t addr, uint8_t value) {
     *bc_mmap_calc(mmap, addr) = value;
 }
 
+void bc_mmap_putstack16(cpu_mmap_t *mmap, uint16_t value) {
+    uint8_t *sp = bc_mmap_calc(mmap, mmap->cpu->regs.SP);
+    *(sp - 1) = value >> 8;
+    *(sp - 2) = value & 0xff;
+    mmap->cpu->regs.SP -= 2;
+}
+
+uint16_t bc_mmap_popstack16(cpu_mmap_t *mmap) {
+    uint8_t *sp = bc_mmap_calc(mmap, mmap->cpu->regs.SP);
+    uint16_t value = *(sp) | (*(sp + 1) << 8);
+    mmap->cpu->regs.SP += 2;
+    return value;
+}
+
 void bc_mmap_release(cpu_mmap_t *target) {
     free(target->all_ram);
     if (target->rom) {

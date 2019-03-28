@@ -5,7 +5,13 @@
 #include <sys/types.h>
 #include <stdio.h>
 
+#if DEBUG
+#define debug_assert(expr) do { if (!(expr)) panic("debug_assert:%s", #expr) } while(0)
 #define debug_log(s, ...) (printf("(debug) in %s (%s:%d):" s "\n", __func__, __FILE__, __LINE__, ##__VA_ARGS__))
+#else
+#define debug_assert(expr) /**/
+#define debug_log(s, ...) /**/
+#endif
 
 typedef struct instruction insn_desc_t;
 typedef struct cart cartridge_t;
@@ -102,11 +108,13 @@ void bc_request_interrupt(bc_cpu_t *cpu, enum bc_int_flag interrupt);
 #define PAIR_HL 0
 #define PAIR_BC 1
 #define PAIR_DE 2
+#define PAIR_AF 3
 static inline uint16_t bc_regs_getpairvalue(cpu_regs_t *regs, int pair) {
     switch(pair) {
         case 0: return (regs->H << 8) | regs->L;
         case 1: return (regs->B << 8) | regs->C;
         case 2: return (regs->D << 8) | regs->E;
+        case 3: return (regs->A << 8) | regs->CPSR;
     }
 
     panic("Write to undefined register pair '%d'", pair);
@@ -116,6 +124,7 @@ static inline void bc_regs_putpairvalue(cpu_regs_t *regs, int pair, uint16_t val
         case 0: regs->H = value >> 8; regs->L = value & 0xFF;
         case 1: regs->B = value >> 8; regs->C = value & 0xFF;
         case 2: regs->D = value >> 8; regs->E = value & 0xFF;
+        case 3: regs->A = value >> 8; regs->CPSR = value & 0xFF;
     }
 }
 
@@ -146,6 +155,9 @@ void bc_mmap_release_rom(cpu_mmap_t *mmap, cartridge_t *rom);
 /* Read/write memory. This is done in the context of CPU code, so MMIO observers will be called. */
 uint8_t bc_mmap_getvalue(cpu_mmap_t *mmap, uint16_t addr);
 void bc_mmap_putvalue(cpu_mmap_t *mmap, uint16_t addr, uint8_t value);
+
+void bc_mmap_putstack16(cpu_mmap_t *mmap, uint16_t value);
+uint16_t bc_mmap_popstack16(cpu_mmap_t *mmap);
 
 /* Add an observer for a MMIO register. When the CPU writes to the register specified by addr,
  * write_proc will be called. The returned value is saved by the mmap, and will be passed to read_proc

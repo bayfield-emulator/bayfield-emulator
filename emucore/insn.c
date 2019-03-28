@@ -327,5 +327,107 @@ static void IMP_insn_or8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     cpu->regs.A = wb;
 }
 
+static void IMP_insn_incr8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    int add_val;
+    switch(opcode) {
+    case 0x04: LOAD_REG(add_val, B);
+    case 0x14: LOAD_REG(add_val, D);
+    case 0x24: LOAD_REG(add_val, H);
+    case 0x34: add_val = GET_HL_INDIRECT(); break;
+    case 0x0c: LOAD_REG(add_val, C);
+    case 0x1c: LOAD_REG(add_val, E);
+    case 0x2c: LOAD_REG(add_val, L);
+    case 0x3c: LOAD_REG(add_val, A);
+    }
+
+    if ((1 + (add_val & 0xf)) & 0x10) {
+        cpu->regs.CPSR |= FLAG_HALF_CARRY;
+    } else {
+        cpu->regs.CPSR &= FLAG_HALF_CARRY;
+    }
+
+    add_val++;
+
+    if ((add_val & 0xFF) == 0) {
+        cpu->regs.CPSR |= FLAG_ZERO;
+    } else {
+        cpu->regs.CPSR &= FLAG_ZERO;
+    }
+
+    cpu->regs.CPSR &= FLAG_NEGATIVE;
+    cpu->regs.A = add_val;
+    switch(opcode) {
+    case 0x04: cpu->regs.B = add_val;
+    case 0x14: cpu->regs.D = add_val;
+    case 0x24: cpu->regs.H = add_val;
+    case 0x34: bc_mmap_putvalue(&cpu->mem, bc_regs_getpairvalue(&cpu->regs, PAIR_HL), add_val); break;
+    case 0x0c: cpu->regs.C = add_val;
+    case 0x1c: cpu->regs.E = add_val;
+    case 0x2c: cpu->regs.L = add_val;
+    case 0x3c: cpu->regs.A = add_val;
+    }
+}
+
+static void IMP_push_pair(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    int pair; 
+
+    switch(opcode >> 4) {
+    case 0xc: pair = PAIR_BC; break;
+    case 0xd: pair = PAIR_DE; break;
+    case 0xe: pair = PAIR_HL; break;
+    case 0xf: pair = PAIR_AF; break;
+    }
+
+    bc_mmap_putstack16(&cpu->mem, bc_regs_getpairvalue(&cpu->regs, pair));
+}
+
+static void IMP_pop_pair(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    int pair; 
+
+    switch(opcode >> 4) {
+    case 0xc: pair = PAIR_BC; break;
+    case 0xd: pair = PAIR_DE; break;
+    case 0xe: pair = PAIR_HL; break;
+    case 0xf: pair = PAIR_AF; break;
+    }
+
+    bc_regs_putpairvalue(&cpu->regs, pair, bc_mmap_popstack16(&cpu->mem));
+}
+
+static void IMP_rst_vec(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    uint16_t target;
+    switch (opcode) {
+    case 0xc7:
+        target = 0x00; break;
+    case 0xd7:
+        target = 0x10; break;
+    case 0xe7:
+        target = 0x20; break;
+    case 0xf7:
+        target = 0x30; break;
+    case 0xcf:
+        target = 0x08; break;
+    case 0xdf:
+        target = 0x18; break;
+    case 0xef:
+        target = 0x28; break;
+    case 0xff:
+        target = 0x38; break;
+    default:
+        panic("should never get here");
+    }
+
+    bc_mmap_putstack16(&cpu->mem, cpu->regs.PC);
+    cpu->regs.PC = target;
+}
+
+static void IMP_edi(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    if (opcode == 0xf3) {
+        cpu->irq_mask &= ~IF_MASTER;
+    } else {
+        cpu->irq_mask |= IF_MASTER;
+    }
+}
+
 #define INSTRUCTION_TABLE 1
 #include "insn_table.h"
