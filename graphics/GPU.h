@@ -22,9 +22,13 @@ class GPU {
 		uint8_t GPU_REG_SCROLLX = 0;
 		uint8_t GPU_REG_WINDOWY = 0;
 		uint8_t GPU_REG_WINDOWX = 0;
+		uint8_t GPU_REG_PALETTE_BG = 0xE4;
+		uint8_t GPU_REG_PALETTE_S0 = 0xE4;
+		uint8_t GPU_REG_PALETTE_S1 = 0xE4;
 
 		uint8_t* VRAM;
 		uint8_t* BG_MAP;
+		uint8_t* OAM;
 		uint32_t* BG_BUFFER;
 		uint32_t* WINDOW_BUFFER;
 		uint32_t* SPRITE_BUFFER;
@@ -33,9 +37,7 @@ class GPU {
 
 		uint32_t* WINDOW_MEMORY;
 
-		uint32_t PALETTE_BG[4] = {0xFFFFFFFF, 0xFFA8A8A8, 0xFF545454, 0xFF000000}; //background palette
-		uint32_t PALETTE_S0[4] = {0xFFFFFFFF, 0xFFA8A8A8, 0xFF545454, 0xFF000000}; //first sprite palette
-		uint32_t PALETTE_S1[4] = {0xFFFFFFFF, 0xFFA8A8A8, 0xFF545454, 0xFF000000}; //second sprite palette
+		const uint32_t PALETTE[4] = {0xFFFFFFFF, 0xFFA8A8A8, 0xFF545454, 0xFF000000};
 
 	public:
 		GPU();
@@ -48,6 +50,15 @@ class GPU {
 		void setBgBufferAddress(uint32_t* buf_addr);
 		void setSpriteBufferAddress(uint32_t* buf_addr); //not done yet
 		void setWindowBufferAddress(uint32_t* buf_addr); //not done yet
+
+		/* Change the colours assigned to the 2-bit background values */
+		void remap_bg_colours(uint8_t map);
+
+		/* Change the colours assigned to 2-bit sprite values in the first sprite value */
+		void remap_s0_colours(uint8_t map);
+		
+		/* Change the colours assigned to 2-bit sprite values in the second sprite value */
+		void remap_s1_colours(uint8_t map);
 
 		/* Copy input array to GPU tile memory */
 		void add_bg_tile(int id, uint8_t* tile);

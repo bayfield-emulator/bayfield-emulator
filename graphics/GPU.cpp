@@ -21,6 +21,7 @@ GPU::GPU() {
 	TILES_BG = VRAM;
 	TILES_SPRITES = VRAM + (4 * KB);
 	BG_MAP = VRAM + (12 * KB);
+	OAM = (uint8_t *) malloc(sizeof(uint8_t) * 160);
 	memset(BG_MAP, 0xFF, (sizeof(uint8_t) * 32 * 32));
 }
 
@@ -28,6 +29,7 @@ GPU::GPU() {
 GPU::~GPU() {
 	free(VRAM);
 	// free(BG_BUFFER); //... RE-ENABLE THIS TOO
+	free(OAM);
 }
 
 //initialize the GPU with a pointer to Window->Surface->Pixels
@@ -50,6 +52,25 @@ void GPU::setWindowBufferAddress(uint32_t* buf_addr) {
 	WINDOW_BUFFER = buf_addr;
 	memset(WINDOW_BUFFER, 0x00FFFFFF, (sizeof(uint32_t) * 256 * 256));
 }
+
+//remap the colours for the background
+//0bABCDEFGH: 11 -> AB, 10 -> CD, etc.
+void GPU::remap_bg_colours(uint8_t map) {
+	GPU_REG_PALETTE_BG = map;
+}
+
+//remap the colours for the first sprite palette
+//0bABCDEFGH: 11 -> AB, 10 -> CD, etc.
+void GPU::remap_s0_colours(uint8_t map) {
+	GPU_REG_PALETTE_S0 = map;
+}
+
+//remap the colours for the second sprite palette
+//0bABCDEFGH: 11 -> AB, 10 -> CD, etc.
+void GPU::remap_s1_colours(uint8_t map) {
+	GPU_REG_PALETTE_S1 = map;
+}
+
 
 //add a tile to the background area of VRAM
 void GPU::add_bg_tile(int id, uint8_t* tile) {
@@ -110,13 +131,16 @@ void GPU::draw_bg() {
 					// 0b0123456789abcdef -> 80, 91, a2, b3, etc.
 					uint8_t B = ((A >> (15 - x) & 0x01) + (((A >> (7 - x)) & 0x01) << 1));
 
+					// run through palette remapping to correct colour
+					uint8_t C = (GPU_REG_PALETTE_BG >> (B << 1)) & 0x03;
+
 					// absolute x and y coordinates to simplify math
 					int abs_x = (x + tile_map_x * 8);
 					int abs_y = (y + tile_map_y * 8);
 					int buf_pos = abs_x + abs_y * 256;
 
 					// look up what colour the saved bits represent, copy it over to buffer
-					BG_BUFFER[buf_pos] = PALETTE_BG[B];
+					BG_BUFFER[buf_pos] = PALETTE[C];
 				}
 			}
 		}
