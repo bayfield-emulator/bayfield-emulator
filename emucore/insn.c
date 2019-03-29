@@ -421,6 +421,91 @@ static void IMP_rst_vec(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     cpu->regs.PC = target;
 }
 
+#define MATCH_CPSR(m, w) ({ mask = m; what = w; }); break
+static void IMP_jump_rel(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    int mask;
+    int what;
+
+    switch(opcode) {
+        case 0x20: MATCH_CPSR(FLAG_ZERO, 0);
+        case 0x30: MATCH_CPSR(FLAG_CARRY, 0);
+
+        case 0x18: MATCH_CPSR(0, 0); // unconditional
+        case 0x28: MATCH_CPSR(FLAG_ZERO, FLAG_ZERO);
+        case 0x38: MATCH_CPSR(FLAG_CARRY, FLAG_CARRY);
+    }
+
+    if ((cpu->regs.CPSR & mask) == what) {
+        int8_t go = bc_convertunsignedvalue(param);
+        cpu->regs.PC += go;
+        // If a branch is taken, this instruction takes 12 clocks.
+        // If not, it only takes 8.
+        cpu->cycles_for_stall = 4;
+    }
+}
+
+static void IMP_jump_absolute(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    int mask;
+    int what;
+
+    switch(opcode) {
+        case 0xc2: MATCH_CPSR(FLAG_ZERO, 0);
+        case 0xd2: MATCH_CPSR(FLAG_CARRY, 0);
+        case 0xe9: // mov pc, hl
+        case 0xc3: MATCH_CPSR(0, 0); // unconditional
+        case 0xca: MATCH_CPSR(FLAG_ZERO, FLAG_ZERO);
+        case 0xda: MATCH_CPSR(FLAG_CARRY, FLAG_CARRY);
+    }
+
+    if (opcode == 0xe9) {
+        cpu->regs.PC = bc_regs_getpairvalue(&cpu->regs, PAIR_HL);
+    } else if ((cpu->regs.CPSR & mask) == what) {
+        cpu->regs.PC = param;
+        // If a branch is taken, this instruction takes 16 clocks.
+        // If not, it only takes 12.
+        cpu->cycles_for_stall = 4;
+    }
+}
+
+static void IMP_call_ret_absolute(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    int mask;
+    int what;
+    int is_ret;
+
+    switch(opcode) {
+        case 0xc0: is_ret = 1; // fall through
+        case 0xc4: MATCH_CPSR(FLAG_ZERO, 0);
+        case 0xd0: is_ret = 1;
+        case 0xd4: MATCH_CPSR(FLAG_CARRY, 0);
+        case 0xc9: is_ret = 1;
+        case 0xcd: MATCH_CPSR(0, 0); // unconditional
+        case 0xc8: is_ret = 1;
+        case 0xcc: MATCH_CPSR(FLAG_ZERO, FLAG_ZERO);
+        case 0xd8: is_ret = 1;
+        case 0xdc: MATCH_CPSR(FLAG_CARRY, FLAG_CARRY);
+    }
+
+    if ((cpu->regs.CPSR & mask) == what) {
+        if (is_ret) {
+            int addr = bc_mmap_popstack16(&cpu->mem);
+            cpu->regs.PC = addr;
+        } else {
+            bc_mmap_putstack16(&cpu->mem, cpu->regs.PC);
+            cpu->regs.PC = param;
+        }
+        // If a branch is taken, this instruction takes 24/20 clocks.
+        // If not, it only takes 12/8.
+        cpu->cycles_for_stall = 12;
+    }
+}
+#undef MATCH_CPSR
+
+static void IMP_reti(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    cpu->irq_mask |= IF_MASTER;
+    int addr = bc_mmap_popstack16(&cpu->mem);
+    cpu->regs.PC = addr;
+}
+
 static void IMP_edi(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     if (opcode == 0xf3) {
         cpu->irq_mask &= ~IF_MASTER;
