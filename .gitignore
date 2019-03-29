@@ -1,0 +1,13 @@
+# Specify filepatterns you want git to ignore.
+
+# TOTALLY LEGAL ROMs
+*.gb
+
+# Buffer dumps
+*.bmp
+
+# Sublime project files
+*.sublime-*
+
+# Ignore executable
+demo
