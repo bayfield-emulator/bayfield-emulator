@@ -143,6 +143,12 @@ static inline uint8_t bc_convertsignedvalue(int8_t val) {
         return (uint8_t)((int)val + 256);
     }
 }
+static inline int bc_convertunsignedvalue(uint8_t val) {
+    if (val > 127) {
+        return *(int8_t *)&val;
+    }
+    return val;
+}
 
 /* ==== MEMORY ==================================================================== */
 
@@ -155,6 +161,7 @@ void bc_mmap_release_rom(cpu_mmap_t *mmap, cartridge_t *rom);
 /* Read/write memory. This is done in the context of CPU code, so MMIO observers will be called. */
 uint8_t bc_mmap_getvalue(cpu_mmap_t *mmap, uint16_t addr);
 void bc_mmap_putvalue(cpu_mmap_t *mmap, uint16_t addr, uint8_t value);
+void bc_mmap_putvalue16(cpu_mmap_t *mmap, uint16_t addr, uint16_t value);
 
 void bc_mmap_putstack16(cpu_mmap_t *mmap, uint16_t value);
 uint16_t bc_mmap_popstack16(cpu_mmap_t *mmap);

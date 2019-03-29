@@ -5,4 +5,5 @@ CFLAGS += -DDEBUG
 	$(CC) -c $< $(CFLAGS)
 
 libemucore.a: $(OBJS)
-	libtool -static -o $@ $^
+	ar -rc $@ $^
+	ranlib -s $@

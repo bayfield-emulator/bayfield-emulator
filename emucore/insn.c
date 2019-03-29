@@ -152,6 +152,38 @@ static void IMP_insn_ld_absolute(bc_cpu_t *cpu, int opcode, int cycle, int param
 #undef LOAD_IPR
 #undef LOAD_REG
 
+static void IMP_insn_ld_16s(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    uint8_t transfer;
+    switch(opcode) {
+    case 0x01: bc_regs_putpairvalue(&cpu->regs, PAIR_BC, param); break;
+    case 0x11: bc_regs_putpairvalue(&cpu->regs, PAIR_DE, param); break;
+    case 0x21: bc_regs_putpairvalue(&cpu->regs, PAIR_HL, param); break;
+    case 0x31: cpu->regs.SP = param; break;
+
+    case 0x08: bc_mmap_putvalue16(&cpu->mem, param, cpu->regs.SP); break;
+    case 0xf9: cpu->regs.SP = bc_regs_getpairvalue(&cpu->regs, PAIR_HL); break;
+    }
+
+    cpu->regs.A = transfer;
+}
+
+static void IMP_insn_mov_sp_to_hl(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    int add_val = bc_convertunsignedvalue(param);
+    uint8_t new_cpsr = 0;
+    if (((cpu->regs.SP & 0xfff) + (add_val & 0xfff)) & 0x100) {
+        new_cpsr |= FLAG_HALF_CARRY;
+    }
+
+    add_val += cpu->regs.SP;
+
+    if (add_val > 0xFFFF) {
+        new_cpsr |= FLAG_CARRY;
+    }
+
+    cpu->regs.CPSR = new_cpsr;
+    cpu->regs.SP = cpu->regs.SP + add_val;
+}
+
 /* Data Processing */
 
 #define LOAD_REG(DST, REG) DST = ( cpu->regs.REG ); break
@@ -168,9 +200,11 @@ static void IMP_insn_add8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     case 0x3: LOAD_REG(add_val, E);
     case 0x4: LOAD_REG(add_val, H);
     case 0x5: LOAD_REG(add_val, L);
-    case 0x6: add_val = GET_HL_INDIRECT(); break;
+    case 0x6: add_val = ((opcode >> 4) > 0xb)? param : GET_HL_INDIRECT(); break;
     case 0x7: LOAD_REG(add_val, A);
     }
+
+    add_val = bc_convertunsignedvalue(add_val);
 
     if (lo & 0x8) {
         // this is an ADC inst
@@ -178,14 +212,14 @@ static void IMP_insn_add8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
         if (((cpu->regs.A & 0xf) + (add_val & 0xf) + cflag) & 0x10) {
             cpu->regs.CPSR |= FLAG_HALF_CARRY;
         } else {
-            cpu->regs.CPSR &= FLAG_HALF_CARRY;
+            cpu->regs.CPSR &= ~FLAG_HALF_CARRY;
         }
         add_val += cpu->regs.A + cflag;
     } else {
         if (((cpu->regs.A & 0xf) + (add_val & 0xf)) & 0x10) {
             cpu->regs.CPSR |= FLAG_HALF_CARRY;
         } else {
-            cpu->regs.CPSR &= FLAG_HALF_CARRY;
+            cpu->regs.CPSR &= ~FLAG_HALF_CARRY;
         }
         add_val += cpu->regs.A;
     }
@@ -193,16 +227,16 @@ static void IMP_insn_add8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     if (add_val > 255) {
         cpu->regs.CPSR |= FLAG_CARRY;
     } else {
-        cpu->regs.CPSR &= FLAG_CARRY;
+        cpu->regs.CPSR &= ~FLAG_CARRY;
     }
 
     if ((add_val & 0xFF) == 0) {
         cpu->regs.CPSR |= FLAG_ZERO;
     } else {
-        cpu->regs.CPSR &= FLAG_ZERO;
+        cpu->regs.CPSR &= ~FLAG_ZERO;
     }
 
-    cpu->regs.CPSR &= FLAG_NEGATIVE;
+    cpu->regs.CPSR &= ~FLAG_NEGATIVE;
     cpu->regs.A = add_val;
 }
 
@@ -218,9 +252,11 @@ static void IMP_insn_sub8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     case 0x3: LOAD_REG(add_val, E);
     case 0x4: LOAD_REG(add_val, H);
     case 0x5: LOAD_REG(add_val, L);
-    case 0x6: add_val = GET_HL_INDIRECT(); break;
+    case 0x6: add_val = ((opcode >> 4) > 0xb)? param : GET_HL_INDIRECT(); break;
     case 0x7: LOAD_REG(add_val, A);
     }
+
+    add_val = bc_convertunsignedvalue(add_val);
 
     if (lo & 0x8) {
         // this is an SBC inst
@@ -228,14 +264,14 @@ static void IMP_insn_sub8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
         if (((cpu->regs.A & 0xf) - (add_val & 0xf) - cflag) & 0x10) {
             cpu->regs.CPSR |= FLAG_HALF_CARRY;
         } else {
-            cpu->regs.CPSR &= FLAG_HALF_CARRY;
+            cpu->regs.CPSR &= ~FLAG_HALF_CARRY;
         }
         add_val -= cpu->regs.A - cflag;
     } else {
         if (((cpu->regs.A & 0xf) - (add_val & 0xf)) & 0x10) {
             cpu->regs.CPSR |= FLAG_HALF_CARRY;
         } else {
-            cpu->regs.CPSR &= FLAG_HALF_CARRY;
+            cpu->regs.CPSR &= ~FLAG_HALF_CARRY;
         }
         add_val -= cpu->regs.A;
     }
@@ -243,13 +279,13 @@ static void IMP_insn_sub8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     if (add_val < -128) {
         cpu->regs.CPSR |= FLAG_CARRY;
     } else {
-        cpu->regs.CPSR &= FLAG_CARRY;
+        cpu->regs.CPSR &= ~FLAG_CARRY;
     }
 
     if ((add_val & 0xFF) == 0) {
         cpu->regs.CPSR |= FLAG_ZERO;
     } else {
-        cpu->regs.CPSR &= FLAG_ZERO;
+        cpu->regs.CPSR &= ~FLAG_ZERO;
     }
 
     cpu->regs.CPSR |= FLAG_NEGATIVE;
@@ -267,15 +303,15 @@ static void IMP_insn_and8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     case 0x3: LOAD_REG(add_val, E);
     case 0x4: LOAD_REG(add_val, H);
     case 0x5: LOAD_REG(add_val, L);
-    case 0x6: add_val = GET_HL_INDIRECT(); break;
+    case 0x6: add_val = (opcode == 0xe6)? param : GET_HL_INDIRECT(); break;
     case 0x7: LOAD_REG(add_val, A);
     }
 
     uint8_t wb = cpu->regs.A & add_val;
     if (!wb) {
-        cpu->regs.CPSR |= FLAG_ZERO;
+        cpu->regs.CPSR |= FLAG_ZERO | FLAG_HALF_CARRY;
     } else {
-        cpu->regs.CPSR &= 0;
+        cpu->regs.CPSR = FLAG_HALF_CARRY;
     }
 
     cpu->regs.A = wb;
@@ -290,7 +326,7 @@ static void IMP_insn_xor8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     case 0x3: LOAD_REG(add_val, E);
     case 0x4: LOAD_REG(add_val, H);
     case 0x5: LOAD_REG(add_val, L);
-    case 0x6: add_val = GET_HL_INDIRECT(); break;
+    case 0x6: add_val = (opcode == 0xee)? param : GET_HL_INDIRECT(); break;
     case 0x7: LOAD_REG(add_val, A);
     }
 
@@ -313,7 +349,7 @@ static void IMP_insn_or8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     case 0x3: LOAD_REG(add_val, E);
     case 0x4: LOAD_REG(add_val, H);
     case 0x5: LOAD_REG(add_val, L);
-    case 0x6: add_val = GET_HL_INDIRECT(); break;
+    case 0x6: add_val = (opcode == 0xf6)? param : GET_HL_INDIRECT(); break;
     case 0x7: LOAD_REG(add_val, A);
     }
 
@@ -329,7 +365,9 @@ static void IMP_insn_or8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
 
 static void IMP_insn_incr8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     int add_val;
-    switch(opcode) {
+    int ic = (opcode & 1)? -1 : 1;
+
+    switch(opcode & (~1)) {
     case 0x04: LOAD_REG(add_val, B);
     case 0x14: LOAD_REG(add_val, D);
     case 0x24: LOAD_REG(add_val, H);
@@ -340,23 +378,27 @@ static void IMP_insn_incr8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     case 0x3c: LOAD_REG(add_val, A);
     }
 
-    if ((1 + (add_val & 0xf)) & 0x10) {
+    if ((ic + (add_val & 0xf)) & 0x10) {
         cpu->regs.CPSR |= FLAG_HALF_CARRY;
     } else {
-        cpu->regs.CPSR &= FLAG_HALF_CARRY;
+        cpu->regs.CPSR &= ~FLAG_HALF_CARRY;
     }
 
-    add_val++;
+    add_val += ic;
 
     if ((add_val & 0xFF) == 0) {
         cpu->regs.CPSR |= FLAG_ZERO;
     } else {
-        cpu->regs.CPSR &= FLAG_ZERO;
+        cpu->regs.CPSR &= ~FLAG_ZERO;
     }
 
-    cpu->regs.CPSR &= FLAG_NEGATIVE;
-    cpu->regs.A = add_val;
-    switch(opcode) {
+    if (opcode & 1) {
+        cpu->regs.CPSR |= FLAG_NEGATIVE;
+    } else {
+        cpu->regs.CPSR &= ~FLAG_NEGATIVE;
+    }
+
+    switch(opcode & (~1)) {
     case 0x04: cpu->regs.B = add_val;
     case 0x14: cpu->regs.D = add_val;
     case 0x24: cpu->regs.H = add_val;
@@ -367,6 +409,102 @@ static void IMP_insn_incr8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     case 0x3c: cpu->regs.A = add_val;
     }
 }
+
+static void IMP_insn_daa(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    uint8_t cpsr = cpu->regs.CPSR;
+    uint8_t new_cpsr = cpsr & ~FLAG_HALF_CARRY;
+    int val = cpu->regs.A;
+    uint8_t adjust;
+
+    if (cpsr & FLAG_HALF_CARRY || (!(cpsr & FLAG_NEGATIVE) && (val & 0xf) > 0x9)) {
+        adjust |= 0x6;
+    }
+
+    if (cpsr & FLAG_CARRY || (!(cpsr & FLAG_NEGATIVE) && val > 0x99)) {
+        adjust |= 0x66;
+        new_cpsr |= FLAG_CARRY;
+    }
+    if (cpsr & FLAG_NEGATIVE) {
+        val -= adjust;
+    } else {
+        val += adjust;
+    }
+
+    if ((val & 0xff) == 0) {
+        new_cpsr |= FLAG_ZERO;
+    }
+
+    cpu->regs.CPSR = new_cpsr;
+    cpu->regs.A = val;
+}
+
+/* 16-Bit Arithmetic */
+
+static void IMP_insn_incdec16(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    int add_val;
+    int ic = ((opcode & 0xf) == 0xB)? -1 : 1;
+    int pair;
+
+    switch(opcode >> 4) {
+    case 0x0: pair = PAIR_BC; break;
+    case 0x1: pair = PAIR_DE; break;
+    case 0x2: pair = PAIR_HL; break;
+    case 0x3: pair = -1; break;
+    }
+
+    if (pair >= 0) {
+        add_val = bc_regs_getpairvalue(&cpu->regs, pair);
+        bc_regs_putpairvalue(&cpu->regs, pair, add_val + ic);
+    } else {
+        cpu->regs.SP += ic;
+    }
+}
+
+static void IMP_insn_add_regs(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    int add_val;
+    int dst = bc_regs_getpairvalue(&cpu->regs, PAIR_HL);
+    switch(opcode >> 4) {
+    case 0x1: add_val = bc_regs_getpairvalue(&cpu->regs, PAIR_BC); break;
+    case 0x2: add_val = bc_regs_getpairvalue(&cpu->regs, PAIR_DE); break;
+    case 0x3: add_val = bc_regs_getpairvalue(&cpu->regs, PAIR_HL); break;
+    case 0x4: add_val = cpu->regs.SP; break;
+    }
+
+    uint8_t new_cpsr = cpu->regs.CPSR & FLAG_ZERO;
+
+    if (((dst & 0xfff) + (add_val & 0xfff)) & 0x100) {
+        new_cpsr |= FLAG_HALF_CARRY;
+    }
+
+    add_val += dst;
+
+    if (add_val > 0xFFFF) {
+        new_cpsr |= FLAG_CARRY;
+    }
+    
+    cpu->regs.CPSR = new_cpsr;
+    bc_regs_putpairvalue(&cpu->regs, PAIR_HL, add_val);
+}
+
+static void IMP_insn_add_sp_imm8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    int add_val = param;
+    uint8_t new_cpsr = 0;
+
+    if (((cpu->regs.SP & 0xfff) + add_val) & 0x100) {
+        new_cpsr |= FLAG_HALF_CARRY;
+    }
+
+    add_val += cpu->regs.SP;
+
+    if (add_val > 0xFFFF) {
+        new_cpsr |= FLAG_CARRY;
+    }
+    
+    cpu->regs.CPSR = new_cpsr;
+    cpu->regs.SP = add_val;
+}
+
+/* Push/pop */
 
 static void IMP_push_pair(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     int pair; 
@@ -393,6 +531,53 @@ static void IMP_pop_pair(bc_cpu_t *cpu, int opcode, int cycle, int param) {
 
     bc_regs_putpairvalue(&cpu->regs, pair, bc_mmap_popstack16(&cpu->mem));
 }
+
+/* Rotates and bitsets */
+
+static void IMP_cpl(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    cpu->regs.CPSR |= FLAG_NEGATIVE | FLAG_HALF_CARRY;
+    cpu->regs.A = ~cpu->regs.A;
+}
+
+static void IMP_ccf(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    uint8_t new_cpsr = cpu->regs.CPSR & (FLAG_ZERO | FLAG_CARRY);
+    new_cpsr ^= FLAG_CARRY;
+    cpu->regs.CPSR = new_cpsr;
+}
+
+static void IMP_scf(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    uint8_t new_cpsr = cpu->regs.CPSR & FLAG_ZERO;
+    new_cpsr |= FLAG_CARRY;
+    cpu->regs.CPSR = new_cpsr;
+}
+
+static void IMP_rot_left(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    int thru_carry = 0;
+
+    uint8_t fin = cpu->regs.A << 1;
+    if (thru_carry) {
+        fin |= (cpu->regs.CPSR & FLAG_CARRY) >> 4;
+    } else {
+        fin |= (cpu->regs.A & 0x80) >> 7;
+    }
+    cpu->regs.CPSR = (cpu->regs.A & 0x80) >> 3;
+    cpu->regs.A = fin;
+}
+
+static void IMP_rot_right(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    int thru_carry = 0;
+
+    uint8_t fin = cpu->regs.A >> 1;
+    if (thru_carry) {
+        fin |= (cpu->regs.CPSR & FLAG_CARRY) << 3;
+    } else {
+        fin |= (cpu->regs.A & 1) << 7;
+    }
+    cpu->regs.CPSR = (cpu->regs.A & 1) << 4;
+    cpu->regs.A = fin;
+}
+
+/* Jumps */
 
 static void IMP_rst_vec(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     uint16_t target;

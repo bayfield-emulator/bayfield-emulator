@@ -86,6 +86,20 @@ void bc_mmap_putvalue(cpu_mmap_t *mmap, uint16_t addr, uint8_t value) {
     *bc_mmap_calc(mmap, addr) = value;
 }
 
+void bc_mmap_putvalue16(cpu_mmap_t *mmap, uint16_t addr, uint16_t value) {
+    if (addr >= 0xFF00 && addr <= 0xFF7F) {
+        panic("using put16 on a MMIO register");
+    }
+
+    if (addr < 0x8000) {
+        panic("write to rom region 0x%llx", addr);
+    }
+
+    uint8_t *loc = bc_mmap_calc(mmap, addr);
+    *loc = value & 0xff;
+    *(loc + 1) = value >> 8;
+}
+
 void bc_mmap_putstack16(cpu_mmap_t *mmap, uint16_t value) {
     uint8_t *sp = bc_mmap_calc(mmap, mmap->cpu->regs.SP);
     *(sp - 1) = value >> 8;
