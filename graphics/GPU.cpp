@@ -150,6 +150,7 @@ void GPU::draw_bg() {
 //assemble all buffers and produce final frame
 void GPU::render() {
 	for (uint8_t y = 0; y < 144; y++) {
+		GPU_REG_LCDCUR_Y = y;
 		for (uint8_t x = 0; x < 160; x++) {
 
 			// calculate shifts
@@ -170,3 +171,4 @@ void GPU::render() {
 // Sprite rendering
 // Window rendering
 // Finish registers
+// Return from render() after each line, recover y pos from LCDCUR_Y each call
