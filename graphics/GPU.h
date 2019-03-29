@@ -6,41 +6,57 @@ NICK
 
 #include <cstdint>
 
-#define TILE_W_H 8
 #define BUFFER_W_H 32
 #define TILE_SIZE 16
 #define KB 1024
+#define SCREEN_OFF_COLOUR 0xFFDEDEDE
 
 #ifndef GB_GPU_H
 #define GB_GPU_H
 
 class GPU {
 	private:
-		uint8_t GPU_REG_LCD_CONTROL = 0;
-		uint8_t GPU_REG_LCD_STATUS = 0;
-		uint8_t GPU_REG_SCROLLY = 0;
-		uint8_t GPU_REG_SCROLLX = 0;
-		uint8_t GPU_REG_WINDOWY = 0;
-		uint8_t GPU_REG_WINDOWX = 0;
-		uint8_t GPU_REG_PALETTE_BG = 0xE4;
-		uint8_t GPU_REG_PALETTE_S0 = 0xE4;
-		uint8_t GPU_REG_PALETTE_S1 = 0xE4;
 
-		uint8_t* VRAM;
-		uint8_t* BG_MAP;
-		uint8_t* OAM;
+		/* REGISTERS */
+		uint8_t GPU_REG_LCD_CONTROL = 0xA3;	// General screen-related values
+		uint8_t GPU_REG_LCD_STATUS = 0;		// Screen-related interrupt values
+		uint8_t GPU_REG_SCROLLY = 0;		// Vertical screen offset
+		uint8_t GPU_REG_SCROLLX = 0;		// Horizontal screen offset
+		uint8_t GPU_REG_LCDCUR_Y = 0;		// Line the GPU is currently scanning out to LCD
+		uint8_t GPU_REG_LY_CMP = 0;			// Value to compare against LCDCUR_Y for interrupt
+		uint8_t GPU_REG_DMA = 0;			// Data transfer related
+		uint8_t GPU_REG_PALETTE_BG = 0xE4;	// Background colour palette
+		uint8_t GPU_REG_PALETTE_S0 = 0xE4;	// Sprite palette [0]
+		uint8_t GPU_REG_PALETTE_S1 = 0xE4;	// Sprite palette [1]
+		uint8_t GPU_REG_WINDOWY = 0;		// 'Window' object vertical position
+		uint8_t GPU_REG_WINDOWX = 0;		// 'Window' object horizontal position
+
+		/* REAL 8KB VRAM SECTIONS */
+		uint8_t* VRAM;				// Start of VRAM
+		uint8_t* TILES_BG;			// Start of background tile data
+		uint8_t* TILES_SPRITES;		// Start of sprite tile data
+		uint8_t* BG_MAP;			// Start of background map
+		uint8_t* OAM; 				// Start of OAM (sprite metadata)
+
+		/* BUFFERS */
 		uint32_t* BG_BUFFER;
 		uint32_t* WINDOW_BUFFER;
 		uint32_t* SPRITE_BUFFER;
-		uint8_t* TILES_BG;
-		uint8_t* TILES_SPRITES;
 
+		/* SDL_WINDOW RENDER DESTINATION */
 		uint32_t* WINDOW_MEMORY;
+
+		/* FUNCTIONS */ 
+		void clear(); // Write value to display to 'turn it off'
 
 		const uint32_t PALETTE[4] = {0xFFFFFFFF, 0xFFA8A8A8, 0xFF545454, 0xFF000000};
 
 	public:
+
+		/* Contructor */
 		GPU();
+
+		/* Destructor */
 		~GPU();
 
 		/* Setup */

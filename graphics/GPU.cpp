@@ -11,6 +11,9 @@ NICK
 
 /* PRIVATE */
 
+void GPU::clear() {
+	memset(WINDOW_MEMORY, SCREEN_OFF_COLOUR, (sizeof(uint32_t) * 160 * 144));
+}
 
 /* PUBLIC */
 
@@ -89,7 +92,6 @@ void GPU::set_bg_tile(int x, int y, int id) {
 	BG_MAP[x + y * 32] = id;
 }
 
-
 //set scroll register values
 void GPU::set_scroll(int8_t x, int8_t y) {
 	GPU_REG_SCROLLY = y;
@@ -149,19 +151,39 @@ void GPU::draw_bg() {
 
 //assemble all buffers and produce final frame
 void GPU::render() {
+	if (!GPU_REG_LCD_CONTROL & 0x80) { //display 'turned off' so clear it and return
+		clear();
+		GPU_REG_LCDCUR_Y = 0; //may not be required, just a guess
+		return;
+	}
 	for (uint8_t y = 0; y < 144; y++) {
+
+		//calculate vertical shift
+		uint8_t shifted_y = (y + GPU_REG_SCROLLY);
+
+		//update current row register
+		GPU_REG_LCDCUR_Y = y;
+
 		for (uint8_t x = 0; x < 160; x++) {
 
-			// calculate shifts
-			uint8_t shifted_x = (x + GPU_REG_SCROLLX); //no mod required as 8 bit numbers overflow at/underflow to
-			uint8_t shifted_y = (y + GPU_REG_SCROLLY); //256, exactly the place where mod would be required
+			// calculate horizontal shift
+			uint8_t shifted_x = (x + GPU_REG_SCROLLX);
 
-			// copy background buffer over
-			WINDOW_MEMORY[x + 160 * y] = BG_BUFFER[shifted_x + 256 * shifted_y];
+			// copy background buffer over, if background draw enabled
+			if (GPU_REG_LCD_CONTROL & 0x01) WINDOW_MEMORY[x + 160 * y] = BG_BUFFER[shifted_x + 256 * shifted_y];
+
+			// copy window buffer if window draw enabled
+			if (GPU_REG_LCD_CONTROL & 0x20) {
+				/* Skip draw if transparency enabled and pixel is target colour (0x0) */
+				if (!GPU_REG_LCD_CONTROL & 0x02 /* && WindowData[POS] == 0x0*/) continue;
+				else continue; /* TODO: draw window here */
+			}
 		}
 		/* H-BLANK */
+		if (GPU_REG_LCD_STATUS & 0x08); //if H-Blank interrupts were enabled, that would happen here
 	}
 	/* V-BLANK */
+	if (GPU_REG_LCD_STATUS & 0x10); //if V-Blank interrupts were enabled, that would happen here
 }
 
 /* TODO */
@@ -170,3 +192,4 @@ void GPU::render() {
 // Sprite rendering
 // Window rendering
 // Finish registers
+// Return from render() after each line, recover y pos from LCDCUR_Y each call
