@@ -9,6 +9,7 @@ NICK
 #define BUFFER_W_H 32
 #define TILE_SIZE 16
 #define KB 1024
+#define SCREEN_OFF_COLOUR 0xFFDEDEDE
 
 #ifndef GB_GPU_H
 #define GB_GPU_H
@@ -17,7 +18,7 @@ class GPU {
 	private:
 
 		/* REGISTERS */
-		uint8_t GPU_REG_LCD_CONTROL = 0;	// General screen-related values
+		uint8_t GPU_REG_LCD_CONTROL = 0xA3;	// General screen-related values
 		uint8_t GPU_REG_LCD_STATUS = 0;		// Screen-related interrupt values
 		uint8_t GPU_REG_SCROLLY = 0;		// Vertical screen offset
 		uint8_t GPU_REG_SCROLLX = 0;		// Horizontal screen offset
@@ -44,6 +45,9 @@ class GPU {
 
 		/* SDL_WINDOW RENDER DESTINATION */
 		uint32_t* WINDOW_MEMORY;
+
+		/* FUNCTIONS */ 
+		void clear(); // Write value to display to 'turn it off'
 
 		const uint32_t PALETTE[4] = {0xFFFFFFFF, 0xFFA8A8A8, 0xFF545454, 0xFF000000};
 
