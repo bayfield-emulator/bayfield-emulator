@@ -1,6 +1,11 @@
 #ifndef EMUCORE_H
 #define EMUCORE_H
 
+// This is the only public header for emucore, and the only one safe to use with C++.
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <sys/types.h>
 #include <stdio.h>
@@ -62,7 +67,7 @@ typedef struct lr35902_mmap {
 typedef struct lr35902 {
     cpu_regs_t regs;
     cpu_mmap_t mem;
-    insn_desc_t *current_instruction;
+    const insn_desc_t *current_instruction;
     uint16_t instruction_param;
     /* Cycles leftover for current ISR.
      * It takes 5 machine cycles to start executing an ISR. */
@@ -71,6 +76,7 @@ typedef struct lr35902 {
     uint32_t cycles_for_insn;
     /* Stall after executing current instruction, for branches, etc. */
     uint32_t cycles_for_stall;
+    uint32_t stalled_cycles;
 
     uint32_t current_clock;
     uint32_t timer_last_clock;
@@ -121,10 +127,10 @@ static inline uint16_t bc_regs_getpairvalue(cpu_regs_t *regs, int pair) {
 }
 static inline void bc_regs_putpairvalue(cpu_regs_t *regs, int pair, uint16_t value) {
     switch(pair) {
-        case 0: regs->H = value >> 8; regs->L = value & 0xFF;
-        case 1: regs->B = value >> 8; regs->C = value & 0xFF;
-        case 2: regs->D = value >> 8; regs->E = value & 0xFF;
-        case 3: regs->A = value >> 8; regs->CPSR = value & 0xFF;
+        case 0: regs->H = value >> 8; regs->L = value & 0xFF; break;
+        case 1: regs->B = value >> 8; regs->C = value & 0xFF; break;
+        case 2: regs->D = value >> 8; regs->E = value & 0xFF; break;
+        case 3: regs->A = value >> 8; regs->CPSR = value & 0xFF; break;
     }
 }
 
@@ -170,5 +176,9 @@ uint16_t bc_mmap_popstack16(cpu_mmap_t *mmap);
  * write_proc will be called. The returned value is saved by the mmap, and will be passed to read_proc
  * the next time the CPU reads from the mmio reg. */
 void bc_mmap_add_mmio_observer(cpu_mmap_t *mmap, uint16_t addr, bc_mmio_observe_t write_proc, bc_mmio_fetch_t read_proc);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

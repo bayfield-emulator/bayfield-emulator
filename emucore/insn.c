@@ -70,8 +70,7 @@ static void IMP_insn_ld8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
 
 /* opcodes: 0x[0123]2 */
 static void IMP_insn_store_A(bc_cpu_t *cpu, int opcode, int cycle, int param) {
-    int lo = (opcode >> 4) & 0xF;
-    int hi = opcode        & 0xF;
+    int hi = opcode >> 4;
     uint8_t transfer = cpu->regs.A;
     switch(hi) {
     case 0x0: STORE_IPR(B, C); break;
@@ -89,8 +88,7 @@ static void IMP_insn_store_A(bc_cpu_t *cpu, int opcode, int cycle, int param) {
 
 /* opcodes: 0x[0123]A */
 static void IMP_insn_ld_indirect(bc_cpu_t *cpu, int opcode, int cycle, int param) {
-    int lo = (opcode >> 4) & 0xF;
-    int hi = opcode        & 0xF;
+    int hi = opcode >> 4;
     uint8_t transfer;
     switch(hi) {
     case 0x0: LOAD_IPR(B, C); break;
@@ -121,8 +119,6 @@ static void IMP_insn_ld_immediate(bc_cpu_t *cpu, int opcode, int cycle, int para
     case 0x2E: cpu->regs.L = param; break;
     case 0x3E: cpu->regs.A = param; break;
     }
-
-    cpu->regs.A = transfer;
 }
 
 static void IMP_insn_ld_absolute(bc_cpu_t *cpu, int opcode, int cycle, int param) {
@@ -153,7 +149,6 @@ static void IMP_insn_ld_absolute(bc_cpu_t *cpu, int opcode, int cycle, int param
 #undef LOAD_REG
 
 static void IMP_insn_ld_16s(bc_cpu_t *cpu, int opcode, int cycle, int param) {
-    uint8_t transfer;
     switch(opcode) {
     case 0x01: bc_regs_putpairvalue(&cpu->regs, PAIR_BC, param); break;
     case 0x11: bc_regs_putpairvalue(&cpu->regs, PAIR_DE, param); break;
@@ -163,8 +158,6 @@ static void IMP_insn_ld_16s(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     case 0x08: bc_mmap_putvalue16(&cpu->mem, param, cpu->regs.SP); break;
     case 0xf9: cpu->regs.SP = bc_regs_getpairvalue(&cpu->regs, PAIR_HL); break;
     }
-
-    cpu->regs.A = transfer;
 }
 
 static void IMP_insn_mov_sp_to_hl(bc_cpu_t *cpu, int opcode, int cycle, int param) {
@@ -189,8 +182,7 @@ static void IMP_insn_mov_sp_to_hl(bc_cpu_t *cpu, int opcode, int cycle, int para
 #define LOAD_REG(DST, REG) DST = ( cpu->regs.REG ); break
 #define GET_HL_INDIRECT() bc_mmap_getvalue(&cpu->mem, bc_regs_getpairvalue(&cpu->regs, PAIR_HL))
 static void IMP_insn_add8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
-    int lo = (opcode >> 4) & 0xF;
-    int hi = opcode        & 0xF;
+    int lo = opcode & 0xF;
 
     int add_val;
     switch(lo & 0x7) {
@@ -204,7 +196,7 @@ static void IMP_insn_add8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     case 0x7: LOAD_REG(add_val, A);
     }
 
-    add_val = bc_convertunsignedvalue(add_val);
+    // add_val = bc_convertunsignedvalue(add_val);
 
     if (lo & 0x8) {
         // this is an ADC inst
@@ -241,8 +233,8 @@ static void IMP_insn_add8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
 }
 
 static void IMP_insn_sub8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
-    int lo = (opcode >> 4) & 0xF;
-    int hi = opcode        & 0xF;
+    int hi = (opcode >> 4) & 0xF;
+    int lo = opcode        & 0xF;
 
     int add_val;
     switch(lo & 0x7) {
@@ -399,22 +391,24 @@ static void IMP_insn_incr8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     }
 
     switch(opcode & (~1)) {
-    case 0x04: cpu->regs.B = add_val;
-    case 0x14: cpu->regs.D = add_val;
-    case 0x24: cpu->regs.H = add_val;
+    case 0x04: cpu->regs.B = add_val; break;
+    case 0x14: cpu->regs.D = add_val; break;
+    case 0x24: cpu->regs.H = add_val; break;
     case 0x34: bc_mmap_putvalue(&cpu->mem, bc_regs_getpairvalue(&cpu->regs, PAIR_HL), add_val); break;
-    case 0x0c: cpu->regs.C = add_val;
-    case 0x1c: cpu->regs.E = add_val;
-    case 0x2c: cpu->regs.L = add_val;
-    case 0x3c: cpu->regs.A = add_val;
+    case 0x0c: cpu->regs.C = add_val; break;
+    case 0x1c: cpu->regs.E = add_val; break;
+    case 0x2c: cpu->regs.L = add_val; break;
+    case 0x3c: cpu->regs.A = add_val; break;
     }
 }
+#undef LOAD_REG
+#undef GET_HL_INDIRECT
 
 static void IMP_insn_daa(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     uint8_t cpsr = cpu->regs.CPSR;
     uint8_t new_cpsr = cpsr & ~FLAG_HALF_CARRY;
     int val = cpu->regs.A;
-    uint8_t adjust;
+    uint8_t adjust = 0;
 
     if (cpsr & FLAG_HALF_CARRY || (!(cpsr & FLAG_NEGATIVE) && (val & 0xf) > 0x9)) {
         adjust |= 0x6;
@@ -552,7 +546,7 @@ static void IMP_scf(bc_cpu_t *cpu, int opcode, int cycle, int param) {
 }
 
 static void IMP_rot_left(bc_cpu_t *cpu, int opcode, int cycle, int param) {
-    int thru_carry = 0;
+    int thru_carry = !!((opcode >> 4) == 1);
 
     uint8_t fin = cpu->regs.A << 1;
     if (thru_carry) {
@@ -565,7 +559,7 @@ static void IMP_rot_left(bc_cpu_t *cpu, int opcode, int cycle, int param) {
 }
 
 static void IMP_rot_right(bc_cpu_t *cpu, int opcode, int cycle, int param) {
-    int thru_carry = 0;
+    int thru_carry = !!((opcode >> 4) == 1);
 
     uint8_t fin = cpu->regs.A >> 1;
     if (thru_carry) {
@@ -623,6 +617,7 @@ static void IMP_jump_rel(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     if ((cpu->regs.CPSR & mask) == what) {
         int8_t go = bc_convertunsignedvalue(param);
         cpu->regs.PC += go;
+        debug_log("moving pc to %x", cpu->regs.PC);
         // If a branch is taken, this instruction takes 12 clocks.
         // If not, it only takes 8.
         cpu->cycles_for_stall = 4;
@@ -649,6 +644,7 @@ static void IMP_jump_absolute(bc_cpu_t *cpu, int opcode, int cycle, int param) {
         // If a branch is taken, this instruction takes 16 clocks.
         // If not, it only takes 12.
         cpu->cycles_for_stall = 4;
+        debug_log("moving pc to %x", cpu->regs.PC);
     }
 }
 
@@ -696,6 +692,14 @@ static void IMP_edi(bc_cpu_t *cpu, int opcode, int cycle, int param) {
         cpu->irq_mask &= ~IF_MASTER;
     } else {
         cpu->irq_mask |= IF_MASTER;
+    }
+}
+
+static void IMP_stop(bc_cpu_t *cpu, int opcode, int cycle, int param) {
+    if (opcode == 0x10) {
+        panic("CPU stopped");
+    } else {
+        cpu->halt = 1;
     }
 }
 

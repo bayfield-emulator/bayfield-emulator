@@ -1,5 +1,5 @@
-OBJS = cpu.o mem.o insn.o timer.o
-CFLAGS += -DDEBUG
+OBJS = cpu.o mem.o insn.o timer.o insn_extended.o
+CFLAGS += -DDEBUG -Wall -g
 
 %.o: %.c
 	$(CC) -c $< $(CFLAGS)
