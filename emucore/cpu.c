@@ -77,33 +77,40 @@ static int do_interrupts(bc_cpu_t *cpu, int budget) {
 
 static void fetch_current_instruction(bc_cpu_t *cpu) {
     uint8_t *insn_loc = bc_mmap_calc(&cpu->mem, cpu->regs.PC);
+    debug_log("calced ip: %x", insn_loc - cpu->mem.rom->bank1);
     uint8_t op = *insn_loc;
-    insn_desc_t *t = &instructions[op];
+    const insn_desc_t *t;
     uint16_t param = 0;
-    switch (t->param_count) {
-    case 2:
-        param = insn_loc[1] | (insn_loc[2] << 8); break;
-    case 1:
-        param = insn_loc[1]; break;
-    case 0:
-        break;
-    default:
-        panic("only two param bytes are supported - opcode %x has %d", op, t->param_count);
+
+    if (op == 0xcb) {
+        param = *(insn_loc + 1);
+        t = select_extended_instruction(param);
+    } else {
+        t = &instructions[op];
+        switch (t->param_count) {
+        case 2:  param = insn_loc[1] | (insn_loc[2] << 8); break;
+        case 1:  param = insn_loc[1]; break;
+        case 0:  param = 0; break;
+        default: panic("only two param bytes are supported - opcode %x has %d", op, t->param_count);
+        }
     }
+
     cpu->current_instruction = t;
     cpu->instruction_param = param;
 }
 
 static int do_instruction(bc_cpu_t *cpu, int budget) {
-    insn_desc_t *t = cpu->current_instruction;
+    const insn_desc_t *t = cpu->current_instruction;
     uint16_t param = cpu->instruction_param;
     if (t->ncycles <= budget) {
-        cpu->regs.PC += t->param_count;
+        cpu->regs.PC += t->param_count + 1;
+        debug_log("Executing instruction: %x", t->opcode);
         t->executor(cpu, t->opcode, 0, param);
         return budget - t->ncycles;
     } else {
+        debug_log("Not enough time: %d %d", t->ncycles, budget);
         // Save for later
-        return t->ncycles - budget;
+        return -(t->ncycles - budget);
     }
 }
 
@@ -112,13 +119,19 @@ void bc_cpu_step(bc_cpu_t *cpu, int ncycles) {
     while (clocks) {
         debug_log("proc loop: starting with %d budget", clocks);
         if (cpu->cycles_for_stall) {
-            clocks -= cpu->cycles_for_stall;
-            if (clocks < 0) {
-                cpu->cycles_for_stall = -clocks;
+            int leftover = clocks - cpu->cycles_for_stall;
+            if (leftover < 0) {
+                cpu->cycles_for_stall = -leftover;
+                cpu->stalled_cycles += clocks;
+                debug_log("still stalling for %d clocks - accumulated_time %d",
+                    cpu->cycles_for_stall, cpu->stalled_cycles);
+                clocks = 0;
             } else {
+                clocks = leftover + cpu->stalled_cycles + cpu->cycles_for_stall;
                 cpu->cycles_for_stall = 0;
+                debug_log("stall did complete - new budget: %d", clocks);
+                cpu->stalled_cycles = 0;
             }
-            debug_log("stall did complete");
             continue;
         }
 
@@ -127,11 +140,13 @@ void bc_cpu_step(bc_cpu_t *cpu, int ncycles) {
         }
         fetch_current_instruction(cpu);
         clocks = do_instruction(cpu, clocks);
+        debug_log("clocks: %d", clocks);
 
         if (clocks < 0) {
             debug_log("Ran out of time so we have to save this inst for next call to bc_step");
             cpu->cycles_for_stall = -clocks;
-            break;
+            cpu->stalled_cycles = cpu->current_instruction->ncycles - -clocks;
+            clocks = 0;
         }
     }
 }
