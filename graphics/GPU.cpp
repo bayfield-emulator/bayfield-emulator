@@ -74,6 +74,7 @@ void GPU::remap_s1_colours(uint8_t map) {
 	GPU_REG_PALETTE_S1 = map;
 }
 
+/* TODO: Merge add_x_tile into one function? Memory is already continuous. */
 
 //add a tile to the background area of VRAM
 void GPU::add_bg_tile(int id, uint8_t* tile) {
@@ -85,6 +86,12 @@ void GPU::add_bg_tile(int id, uint8_t* tile) {
 void GPU::add_sprite_tile(int id, uint8_t* sprite) {
 	uint8_t* dest = TILES_SPRITES + id * TILE_SIZE;
 	memcpy((void *) dest, (void *) sprite, TILE_SIZE);
+}
+
+//add a sprite's to OAM memory
+void GPU::set_sprite_data(uint8_t pos, uint8_t x, uint8_t y, uint8_t id, uint8_t misc) {
+	uint32_t* oam_pos = (uint32_t*) OAM + 4 * pos;
+	*oam_pos = x << 24 + y << 16 + id << 8 + misc;
 }
 
 //set an area in backgroud to render as tile [id] from backgroud/shared VRAM

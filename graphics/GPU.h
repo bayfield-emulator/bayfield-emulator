@@ -82,6 +82,9 @@ class GPU {
 		/* Copy input array to GPU tile memory */
 		void add_sprite_tile(int id, uint8_t* sprite);
 
+		/* Set object sprite, x, y, flip, palette and priority */
+		void set_sprite_data(uint8_t pos, uint8_t x, uint8_t y, uint8_t id, uint8_t misc);
+
 		/* Set background tile [id] to background map at [x] [y] */
 		void set_bg_tile(int x, int y, int id);
 
