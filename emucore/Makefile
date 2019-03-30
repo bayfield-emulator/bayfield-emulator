@@ -7,3 +7,10 @@ CFLAGS += -DDEBUG -Wall -g
 libemucore.a: $(OBJS)
 	ar -rc $@ $^
 	ranlib -s $@
+
+cputest: cputest.o libemucore.a
+	$(CC) -o $@ ${CFLAGS} ${LDFLAGS} $^
+
+.phony clean:
+	rm -f libemucore.a
+	rm -f *.o

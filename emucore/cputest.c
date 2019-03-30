@@ -3,20 +3,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include "emucore/emucore.h"
+#include "emucore.h"
 
 static bc_cpu_t *global_cpu;
 
-void panic(const char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-
-    printf("\npanic(");
-    vprintf(fmt, ap);
-    printf(")\n");
-
-    va_end(ap);
-
+void dump_regs() {
     printf("registers:\n");
     printf("\tA: $%02x (%d)\tB: $%02x (%d)\tC: $%02x (%d)\n",
         global_cpu->regs.A, global_cpu->regs.A,
@@ -29,7 +20,19 @@ void panic(const char *fmt, ...) {
     printf("\tL: $%02x (%d)\n", global_cpu->regs.L, global_cpu->regs.L);
     printf("\tSP: $%04x\tPC: $%04x\tCPSR: $%02x\n",
         global_cpu->regs.SP, global_cpu->regs.PC, global_cpu->regs.CPSR);
+}
 
+void panic(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+
+    printf("\npanic(");
+    vprintf(fmt, ap);
+    printf(")\n");
+
+    va_end(ap);
+
+    dump_regs();
     exit(1);
 }
 
@@ -39,9 +42,9 @@ int main(int argc, char const *argv[]) {
         fputs("Usage: cputest <rom file>", stderr);
         return 1;
     }
-    cartridge_t *rom_memory = malloc(sizeof(cartridge_t) + 32767);
-    read(fd, rom_memory + 1, 32767);
-    rom_memory->image_size = 32767;
+    cartridge_t *rom_memory = malloc(sizeof(cartridge_t) + 32768);
+    read(fd, rom_memory + 1, 32768);
+    rom_memory->image_size = 32768;
     rom_memory->bank1 = rom_memory + 1;
     rom_memory->bankx = (uint8_t *)(rom_memory + 1) + 16384;
 
@@ -49,9 +52,15 @@ int main(int argc, char const *argv[]) {
     bc_mmap_take_rom(&global_cpu->mem, rom_memory);
     bc_cpu_reset(global_cpu);
 
+    uint16_t pc = global_cpu->regs.PC;
     while (!global_cpu->stop) {
-        bc_cpu_step(global_cpu, 16384);
-        usleep(16667);
+        bc_cpu_step(global_cpu, 1);
+
+        if (pc != global_cpu->regs.PC) {
+            dump_regs();
+            //getchar();
+            pc = global_cpu->regs.PC;
+        }
     }
 
     bc_cpu_release(global_cpu);
