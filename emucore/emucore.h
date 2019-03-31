@@ -12,7 +12,7 @@ extern "C" {
 
 #if DEBUG
 #define debug_assert(expr) do { if (!(expr)) panic("debug_assert:%s", #expr) } while(0)
-#define debug_log(s, ...) (printf("(debug) in %s (%s:%d):" s "\n", __func__, __FILE__, __LINE__, ##__VA_ARGS__))
+#define debug_log(s, ...) (fprintf(stderr, "(debug) in %s (%s:%d):" s "\n", __func__, __FILE__, __LINE__, ##__VA_ARGS__))
 #else
 #define debug_assert(expr) /**/
 #define debug_log(s, ...) /**/
@@ -123,14 +123,14 @@ static inline uint16_t bc_regs_getpairvalue(cpu_regs_t *regs, int pair) {
         case 3: return (regs->A << 8) | regs->CPSR;
     }
 
-    panic("Write to undefined register pair '%d'", pair);
+    panic("read undefined register pair '%d'", pair);
 }
 static inline void bc_regs_putpairvalue(cpu_regs_t *regs, int pair, uint16_t value) {
     switch(pair) {
         case 0: regs->H = value >> 8; regs->L = value & 0xFF; break;
         case 1: regs->B = value >> 8; regs->C = value & 0xFF; break;
         case 2: regs->D = value >> 8; regs->E = value & 0xFF; break;
-        case 3: regs->A = value >> 8; regs->CPSR = value & 0xFF; break;
+        case 3: regs->A = value >> 8; regs->CPSR = value & 0xF0; break;
     }
 }
 
@@ -147,6 +147,13 @@ static inline uint8_t bc_convertsignedvalue(int8_t val) {
         return val;
     } else {
         return (uint8_t)((int)val + 256);
+    }
+}
+static inline uint16_t bc_convertsignedvalue16(int16_t val) {
+    if (val >= 0) {
+        return val;
+    } else {
+        return (uint16_t)((int)val + 65536);
     }
 }
 static inline int bc_convertunsignedvalue(uint8_t val) {

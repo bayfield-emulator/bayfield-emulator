@@ -9,5 +9,11 @@
 # Sublime project files
 *.sublime-*
 
-# Ignore executable
+# OS X debug symbols
+*.dSYM
+
+# Ignore executables and object files
 demo
+cputest
+*.a
+*.o

@@ -33,9 +33,7 @@ uint8_t *bc_mmap_calc(cpu_mmap_t *mem, uint16_t addr) {
     if (addr < 0x4000) {
         return mem->rom->bank1 + addr;
     } else if (addr < 0x8000) {
-        return mem->rom->bank1 + (addr - 0x4000);
-    } else if (addr < 0xFE00 && addr >= 0xE000) {
-        return mem->wram + (addr - 0xE000);
+        return mem->rom->bankx + (addr - 0x4000);
     } else {
         return mem->all_ram + (addr - 0x8000);
     }
@@ -45,7 +43,9 @@ uint8_t bc_mmap_getvalue(cpu_mmap_t *mmap, uint16_t addr) {
     if (addr >= 0xFF00 && addr <= 0xFF7F) {
         int slot = addr - 0xFF00;
         if (!mmap->observers[slot].get) {
-            panic("read from unregistered MMIO register 0x%04x", slot);
+            // FIXME: should panic once all mmios implemented
+            // debug_log("warning: read from unregistered MMIO register 0x%04x", slot);
+            return mmap->mmio_storage[slot];
         } else if (mmap->observers[slot].get == DEFAULT_FETCHER) {
             return mmap->mmio_storage[slot];
         } else {
@@ -66,7 +66,9 @@ void bc_mmap_putvalue(cpu_mmap_t *mmap, uint16_t addr, uint8_t value) {
     if (addr >= 0xFF00 && addr <= 0xFF7F) {
         int slot = addr - 0xFF00;
         if (!mmap->observers[slot].get) {
-            panic("write to unregistered MMIO register 0x%04x", slot);
+            mmap->mmio_storage[slot] = value;
+            // FIXME: should panic once all mmios implemented
+            // debug_log("warning: write to unregistered MMIO register 0x%04x", slot);
         } else if (mmap->observers[slot].set == DEFAULT_OBSERVER) {
             mmap->mmio_storage[slot] = value;
         } else {
@@ -80,6 +82,7 @@ void bc_mmap_putvalue(cpu_mmap_t *mmap, uint16_t addr, uint8_t value) {
     }
 
     if (addr < 0x8000) {
+        // FIXME: code can write to rom region once we add MBC support
         panic("write to rom region 0x%llx", addr);
     }
 

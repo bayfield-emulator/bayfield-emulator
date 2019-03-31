@@ -7,6 +7,9 @@
     const insn_desc_t CB_INSN_LONG_##name = (insn_desc_t){0xcb, 1, 16, &func}; \
     const insn_desc_t CB_INSN_SHORT_##name = (insn_desc_t){0xcb, 1, 8, &func}
 
+#define SELECT_CB_INSTRUCTION_PAIR(name, is_long) \
+    ((is_long)? &CB_INSN_LONG_##name : &CB_INSN_SHORT_##name)
+
 DECL_CB_INSTRUCTION_PAIR(bit_set_or_clr, IMP_insn_set_res);
 DECL_CB_INSTRUCTION_PAIR(bit_select, IMP_insn_bit_sel);
 DECL_CB_INSTRUCTION_PAIR(rotate_right, IMP_rot_right_e);
@@ -18,23 +21,37 @@ DECL_CB_INSTRUCTION_PAIR(swap, IMP_swap_nibble);
 const insn_desc_t *select_extended_instruction(int opcode) {
     int hi = opcode >> 4;
     int lo = opcode & 0xf;
-    if (hi >= 0x80) {
+
+    int is_long = 0;
+    if (lo == 0x6 || lo == 0xE) {
         // All insns ending in 6 or E operate on (HL), so they take double clocks.
-        return ((opcode & 0x7) == 6)? &CB_INSN_LONG_bit_set_or_clr : &CB_INSN_SHORT_bit_set_or_clr;
-    } else if (hi >= 0x40) {
-        return ((opcode & 0x7) == 6)? &CB_INSN_LONG_bit_select : &CB_INSN_SHORT_bit_select;
-    } else if (hi >= 0x30 && lo < 0x8) {
-        return ((opcode & 0x7) == 6)? &CB_INSN_LONG_swap : &CB_INSN_SHORT_swap;
-    } else if (hi >= 0x30 && lo >= 0x8) {
-        return ((opcode & 0x7) == 6)? &CB_INSN_LONG_rotate_right_replicate : &CB_INSN_SHORT_rotate_right_replicate;
-    } else if (hi >= 0x20 && lo < 0x8) {
-        return ((opcode & 0x7) == 6)? &CB_INSN_LONG_rotate_left_zfill : &CB_INSN_SHORT_rotate_left_zfill;
-    } else if (hi >= 0x20 && lo >= 0x8) {
-        return ((opcode & 0x7) == 6)? &CB_INSN_LONG_rotate_right_replicate : &CB_INSN_SHORT_rotate_right_replicate;
-    } else if (lo >= 0x8) {
-        return ((opcode & 0x7) == 6)? &CB_INSN_LONG_rotate_right : &CB_INSN_SHORT_rotate_right;
-    } else {
-        return ((opcode & 0x7) == 6)? &CB_INSN_LONG_rotate_left : &CB_INSN_SHORT_rotate_left;
+        is_long = 1;
+    }
+
+    if (hi >= 0x8) {
+        return SELECT_CB_INSTRUCTION_PAIR(bit_set_or_clr, is_long);
+    }
+    if (hi >= 0x4 && hi < 0x8) {
+        return SELECT_CB_INSTRUCTION_PAIR(bit_select, is_long);
+    }
+    if (hi == 0x3 && lo < 0x8) {
+        return SELECT_CB_INSTRUCTION_PAIR(swap, is_long);
+    }
+    if (hi == 0x3 && lo >= 0x8) {
+        return SELECT_CB_INSTRUCTION_PAIR(rotate_right_replicate, is_long);
+    }
+    if (hi == 0x2 && lo < 0x8) {
+        return SELECT_CB_INSTRUCTION_PAIR(rotate_left_zfill, is_long);
+    }
+    if (hi == 0x2 && lo >= 0x8) {
+        return SELECT_CB_INSTRUCTION_PAIR(rotate_right_replicate, is_long);
+    }
+    if (hi == 0x1 || hi == 0x0) {
+        if (lo >= 0x8) {
+            return SELECT_CB_INSTRUCTION_PAIR(rotate_right, is_long);
+        } else {
+            return SELECT_CB_INSTRUCTION_PAIR(rotate_left, is_long);
+        }
     }
 
     panic("no extended insn for that opcode?");
@@ -81,7 +98,7 @@ static void put_reg_by_cb_encoding_num(bc_cpu_t *cpu, int regnum, uint8_t val) {
 // rlc, rl
 static void IMP_rot_left_e(bc_cpu_t *cpu, int opcode, int cycle, int real_opcode) {
     int regnum = real_opcode % 8;
-    int thru_carry = !!((opcode >> 4) == 1);
+    int thru_carry = !!((real_opcode >> 4) == 1);
     uint8_t operand = get_reg_by_cb_encoding_num(cpu, regnum);
 
     uint8_t fin = operand << 1;
@@ -97,7 +114,7 @@ static void IMP_rot_left_e(bc_cpu_t *cpu, int opcode, int cycle, int real_opcode
 // rrc, rr
 static void IMP_rot_right_e(bc_cpu_t *cpu, int opcode, int cycle, int real_opcode) {
     int regnum = real_opcode % 8;
-    int thru_carry = !!((opcode >> 4) == 1);
+    int thru_carry = !!((real_opcode >> 4) == 1);
     uint8_t operand = get_reg_by_cb_encoding_num(cpu, regnum);
 
     uint8_t fin = operand >> 1;
@@ -142,6 +159,7 @@ static void IMP_rot_right_rep(bc_cpu_t *cpu, int opcode, int cycle, int real_opc
 static void IMP_swap_nibble(bc_cpu_t *cpu, int opcode, int cycle, int real_opcode) {
     int regnum = real_opcode % 8;
     uint8_t operand = get_reg_by_cb_encoding_num(cpu, regnum);
+
     uint8_t fin = ((operand & 0xf) << 4) | (operand >> 4);
     
     cpu->regs.CPSR = (fin? 0 : FLAG_ZERO);
@@ -170,7 +188,7 @@ static void IMP_insn_set_res(bc_cpu_t *cpu, int opcode, int cycle, int real_opco
     int hi = real_opcode >> 4;
     int is_set = !!(hi > 0xb);
 
-    int bit_num = (real_opcode - 0x80) / 8;
+    int bit_num = (real_opcode / 8) % 8;
     int regnum = real_opcode % 8;
     switch (regnum) {
     case 0: DO_BSET(B); break;
