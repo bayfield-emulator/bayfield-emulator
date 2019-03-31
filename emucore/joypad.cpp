@@ -1,6 +1,6 @@
-/*NOTE: Add interrupts*/
 #include <SDL.h>
 #include <iostream>
+#include "emucore.h"
 #include "joypad.h"
 
 void joyp_reset(joyp_t *jpad) {
@@ -22,16 +22,17 @@ uint8_t joyp_get_state(joyp_t *jpad, uint8_t jp_reg) {
 
 /**
 * NOTE: This is a temporary function for the main input loop.
-* Still needs to be integrated.
+* Still needs to be integrated. It's a little screwy as is.
 */
-int joyp_poll(joyp_t *jpad) {
+void joyp_poll(bc_cput_t *cpu, joyp_t *jpad) {
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
 		std::cout << "SDL Initialization Error" << SDL_GetError() << std::endl;
-		return 1;
+		return;
 	}
 
 	bool isRunning = true;
 	SDL_Event ev;
+	enum bc_int_flag interrupt = IF_JOYPAD;
 	uint8_t dir_acc = 0x00;
 	uint8_t but_acc = 0x00;
 
@@ -68,6 +69,7 @@ int joyp_poll(joyp_t *jpad) {
 					break;
 				}
 
+				bc_request_interrupt(cpu, interrupt);
 				break;
 			case SDL_KEYUP:
 				dir_acc = 0x00;
@@ -77,5 +79,5 @@ int joyp_poll(joyp_t *jpad) {
 			joyp_set(jpad, dir_acc, but_acc);
 		}
 	}
-	return 0;
+	return;
 }
