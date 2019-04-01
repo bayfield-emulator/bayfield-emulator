@@ -24,8 +24,9 @@ GPU::GPU() {
 	TILES_BG = VRAM;
 	TILES_SPRITES = VRAM + (4 * KB);
 	BG_MAP = VRAM + (12 * KB);
-	OAM = (uint8_t *) malloc(sizeof(uint8_t) * 160);
+	OAM = (uint32_t *) malloc(sizeof(uint32_t) * 40);
 	memset(BG_MAP, 0xFF, (sizeof(uint8_t) * 32 * 32));
+	memset(OAM, 0x00, (sizeof(uint32_t) * 40));
 }
 
 // destructor
@@ -48,12 +49,12 @@ void GPU::setBgBufferAddress(uint32_t* buf_addr) {
 
 void GPU::setSpriteBufferAddress(uint32_t* buf_addr) {
 	SPRITE_BUFFER = buf_addr;
-	memset(SPRITE_BUFFER, 0x00FFFFFF, (sizeof(uint32_t) * 256 * 256));
+	memset(SPRITE_BUFFER, 0x00000000, (sizeof(uint32_t) * 256 * 256));
 }
 
 void GPU::setWindowBufferAddress(uint32_t* buf_addr) {
 	WINDOW_BUFFER = buf_addr;
-	memset(WINDOW_BUFFER, 0x00FFFFFF, (sizeof(uint32_t) * 256 * 256));
+	memset(WINDOW_BUFFER, 0x00000000, (sizeof(uint32_t) * 256 * 256));
 }
 
 //remap the colours for the background
@@ -90,8 +91,8 @@ void GPU::add_sprite_tile(int id, uint8_t* sprite) {
 
 //add a sprite's to OAM memory
 void GPU::set_sprite_data(uint8_t pos, uint8_t x, uint8_t y, uint8_t id, uint8_t misc) {
-	uint32_t* oam_pos = (uint32_t*) OAM + 4 * pos;
-	*oam_pos = x << 24 + y << 16 + id << 8 + misc;
+	uint32_t* oam_pos = OAM + pos;
+	*oam_pos = (x << 24) + (y << 16) + (id << 8) + misc;
 }
 
 //set an area in backgroud to render as tile [id] from backgroud/shared VRAM
@@ -107,7 +108,58 @@ void GPU::set_scroll(int8_t x, int8_t y) {
 
 //draw the sprites to a buffer
 void GPU::draw_sprites() {
-	return;
+	for (uint8_t oam_pos = 0; oam_pos < 40; oam_pos++) {
+
+		uint32_t* SPRT_DATA_ADDR = OAM + oam_pos;
+
+		uint8_t spr_x = *SPRT_DATA_ADDR >> 24;
+		uint8_t spr_y = *SPRT_DATA_ADDR >> 16;
+		uint8_t spr_tile_id = *SPRT_DATA_ADDR >> 8;
+		bool priority = *SPRT_DATA_ADDR >> 7; /* TODO */
+		bool flip_x = *SPRT_DATA_ADDR >> 6;
+		bool flip_y = *SPRT_DATA_ADDR >> 5;
+		bool palette = *SPRT_DATA_ADDR >> 4;
+
+		uint16_t* TILE_ADDR = (uint16_t *) TILES_SPRITES + spr_tile_id * 8;
+
+		/* If sprite is on screen, draw it  */
+		if (spr_y > 8 /* TODO: OR Y > 0 IN SPRITE MODE 1 (8x16)*/) {
+
+			spr_y -= 8; //convert to top | TODO: 16 for double height sprites
+			spr_x -= 8; //convert to left
+
+			// copy [tile -> buffer] loops
+			for (int16_t y = 0; y < 8; y++)	{
+				if (((int16_t) spr_y) + y < 0 || spr_y + y > 144) continue; //skip lines off screen
+				for (int16_t x = 0; x < 8; x++) {
+					if (((int16_t) spr_x) + x < 0 || spr_x + x > 160) continue; //skip pixels off screen
+
+					// get value of line of pixels, flip if required
+					uint16_t A = TILE_ADDR[flip_y ? (7 - y) : y];
+
+					// flip x if required
+					uint16_t ux = (flip_x ? (7 - x) : x);
+
+					// shuffle bits about to make sense of GB's storage format
+					// 0b0123456789abcdef -> 80, 91, a2, b3, etc.
+					uint8_t B = ((A >> (15 - ux) & 0x01) + (((A >> (7 - ux)) & 0x01) << 1));
+
+					// run through palette remapping to correct colour
+					uint8_t C = (((palette) ? GPU_REG_PALETTE_S1 : GPU_REG_PALETTE_S0) >> (B << 1)) & 0x03;
+
+					// absolute x and y coordinates to simplify math
+					uint8_t abs_x = (x + spr_x);
+					uint8_t abs_y = (y + spr_y);
+					uint16_t buf_pos = abs_x + abs_y * 256;
+
+					// look up what colour the saved bits represent, copy it over to buffer
+					// if it's colour 0, it's transparent, mark it as such
+					uint32_t colour = (C) ? PALETTE[C] : 0x00000000;
+					SPRITE_BUFFER[buf_pos] = colour;
+				}
+			}
+		}
+	}
 }
 
 //draw the window object to a buffer
@@ -178,6 +230,12 @@ void GPU::render() {
 
 			// copy background buffer over, if background draw enabled
 			if (GPU_REG_LCD_CONTROL & 0x01) WINDOW_MEMORY[x + 160 * y] = BG_BUFFER[shifted_x + 256 * shifted_y];
+
+			// copy sprite buffer over, if sprite draw enabled
+			if (GPU_REG_LCD_CONTROL & 0x02) {
+				// ignore transparent pixels
+				if (SPRITE_BUFFER[x + y * 256] >> 24) WINDOW_MEMORY[x + y * 160] = SPRITE_BUFFER[x + y * 256];
+			}
 
 			// copy window buffer if window draw enabled
 			if (GPU_REG_LCD_CONTROL & 0x20) {

@@ -3,8 +3,10 @@
 # TOTALLY LEGAL ROMs
 *.gb
 
-# Buffer dumps
+# Dumps & Logs
 *.bmp
+*log*.txt
+*.dmp
 
 # Sublime project files
 *.sublime-*

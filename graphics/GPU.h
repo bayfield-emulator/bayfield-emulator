@@ -36,7 +36,7 @@ class GPU {
 		uint8_t* TILES_BG;			// Start of background tile data
 		uint8_t* TILES_SPRITES;		// Start of sprite tile data
 		uint8_t* BG_MAP;			// Start of background map
-		uint8_t* OAM; 				// Start of OAM (sprite metadata)
+		uint32_t* OAM; 				// Start of OAM (sprite metadata)
 
 		/* BUFFERS */
 		uint32_t* BG_BUFFER;
@@ -50,6 +50,7 @@ class GPU {
 		void clear(); // Write value to display to 'turn it off'
 
 		const uint32_t PALETTE[4] = {0xFFFFFFFF, 0xFFA8A8A8, 0xFF545454, 0xFF000000};
+		// const uint32_t PALETTE[4] = {0xFF000000, 0xFF545454, 0xFFA8A8A8, 0xFFFFFFFF};
 
 	public:
 

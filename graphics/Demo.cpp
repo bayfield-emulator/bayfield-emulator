@@ -124,8 +124,27 @@ int main(int argc, char const *argv[]) {
 	//draw background to buffer
 	main_gpu->draw_bg();
 
+	//add sprite tiles to VRAM
+	main_gpu->add_sprite_tile(0, whiteBlock);
+	main_gpu->add_sprite_tile(1, lightgreyBlock);
+	main_gpu->add_sprite_tile(2, darkgreyBlock);
+	main_gpu->add_sprite_tile(3, blackBlock);
+
+	//generate some sprite data, add to OAM
+	uint8_t id = 0;
+	for (int y = 4; y < 36; y+=8) {
+		for (int x = 4; x < 68; x+=8) {
+			main_gpu->set_sprite_data(id, x + 8, y + 8, ((id) % 4), 0x00);
+			id++;
+		}
+		id++;
+	}
+
+	//draw sprites to buffer
+	main_gpu->draw_sprites();
+
 	//copy buffer to window
-	//includes scroll register offsets
+	//includes scroll register offsets for background
 	main_gpu->render();
 	win->refresh(false);
 
@@ -134,6 +153,9 @@ int main(int argc, char const *argv[]) {
 
 	//dump background buffer contents
 	SDL_SaveBMP(bg_buffer, "bg_buffer.bmp");
+
+	//dump background buffer contents
+	SDL_SaveBMP(sprite_buffer, "spr_buffer.bmp");
 
 	//While application is running
 	while (!quit) {
