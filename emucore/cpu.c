@@ -41,20 +41,17 @@ void bc_request_interrupt(bc_cpu_t *cpu, enum bc_int_flag interrupt) {
     cpu->irqs |= interrupt;
 } 
 
-static int goto_isr_if_allowed(bc_cpu_t *cpu, enum bc_int_flag flg) {
-    if (cpu->irqs & flg) {
+static int goto_isr_if_allowed(bc_cpu_t *cpu, int active, enum bc_int_flag flg, uint16_t sr_address) {
+    if (active & flg) {
         cpu->irqs &= (~flg);
-        if (!(cpu->irq_mask & flg)) {
-            debug_log("dropped irq %d because cpu disabled", flg);
-            return 0;
-        }
         // moving PC to isr takes 20 clocks/5 machs
-        cpu->cycles_for_stall = 20;
+        bc_cpu_stall(cpu, 20, STALL_TYPE_BACK);
         // disable further interrupts
         cpu->irq_mask &= ~IF_MASTER;
         // push pc onto stack and go to ISR
         bc_mmap_putstack16(&cpu->mem, cpu->regs.PC);
-        cpu->regs.PC = 0x0040;
+        debug_log("PC -> %x for ISR", sr_address);
+        cpu->regs.PC = sr_address;
         return 1;
     }
     return 0;
@@ -62,16 +59,29 @@ static int goto_isr_if_allowed(bc_cpu_t *cpu, enum bc_int_flag flg) {
 
 static int do_interrupts(bc_cpu_t *cpu, int budget) {
     if (!(cpu->irq_mask & IF_MASTER)) {
-        cpu->irq_mask &= IF_MASTER;
-        //debug_log("interrupts disabled - doing nothing!");
+        if (cpu->irqs) {
+            if (cpu->halt) {
+                debug_log("arise, game boy");
+            }
+            cpu->halt = 0;
+        }
+        // debug_log("interrupts disabled - doing nothing!");
         return 0;
     }
 
-    if (goto_isr_if_allowed(cpu, IF_VBLANK)) return 1;
-    if (goto_isr_if_allowed(cpu, IF_LCDSTAT)) return 1;
-    if (goto_isr_if_allowed(cpu, IF_TIMER)) return 1;
-    if (goto_isr_if_allowed(cpu, IF_SERIAL)) return 1; 
-    if (goto_isr_if_allowed(cpu, IF_JOYPAD)) return 1;
+    int real_irqs = cpu->irqs & cpu->irq_mask;
+    if (real_irqs) {
+        if (cpu->halt) {
+            debug_log("arise, game boy, and go isr");
+        }
+        cpu->halt = 0;
+    }
+
+    if (goto_isr_if_allowed(cpu, real_irqs, IF_VBLANK, ISR_VBLANK)) return 1;
+    if (goto_isr_if_allowed(cpu, real_irqs, IF_LCDSTAT, ISR_LCDSTAT)) return 1;
+    if (goto_isr_if_allowed(cpu, real_irqs, IF_TIMER, ISR_TIMER)) return 1;
+    if (goto_isr_if_allowed(cpu, real_irqs, IF_SERIAL, ISR_SERIAL)) return 1; 
+    if (goto_isr_if_allowed(cpu, real_irqs, IF_JOYPAD, ISR_JOYPAD)) return 1;
     return 0;
 }
 
@@ -116,6 +126,7 @@ static int do_instruction(bc_cpu_t *cpu, int budget) {
 
 void bc_cpu_step(bc_cpu_t *cpu, int ncycles) {
     int clocks = ncycles * 4;
+    int last_clocks = clocks;
     while (clocks) {
         //debug_log("proc loop: starting with %d budget", clocks);
         if (cpu->cycles_for_stall) {
@@ -127,17 +138,34 @@ void bc_cpu_step(bc_cpu_t *cpu, int ncycles) {
                 //    cpu->cycles_for_stall, cpu->stalled_cycles);
                 clocks = 0;
             } else {
-                clocks = leftover + cpu->stalled_cycles + cpu->cycles_for_stall;
+                clocks = leftover + ((cpu->stalled_cycles + cpu->cycles_for_stall) & cpu->stall_counts_towards_budget);
                 cpu->cycles_for_stall = 0;
-                //debug_log("stall did complete - new budget: %d", clocks);
+                // debug_log("stall did complete - new budget: %d", clocks);
+                bc_timer_add_cycles(cpu, cpu->stalled_cycles);
                 cpu->stalled_cycles = 0;
             }
+
+            last_clocks = clocks;
             continue;
         }
 
         if (do_interrupts(cpu, clocks)) {
             continue;
         }
+
+        if (cpu->halt) {
+            // We still need to service timers
+            if (clocks >= 16) {
+                bc_timer_add_cycles(cpu, 16);
+                clocks -= 16;
+                last_clocks = clocks;
+            } else {
+                bc_timer_add_cycles(cpu, clocks);
+                clocks = 0;
+            }
+            continue;
+        }
+
         fetch_current_instruction(cpu);
         clocks = do_instruction(cpu, clocks);
         //debug_log("clocks: %d", clocks);
@@ -146,8 +174,13 @@ void bc_cpu_step(bc_cpu_t *cpu, int ncycles) {
             //debug_log("Ran out of time so we have to save this inst for next call to bc_step");
             cpu->cycles_for_stall = -clocks;
             cpu->stalled_cycles = cpu->current_instruction->ncycles - -clocks;
+            cpu->stall_counts_towards_budget = STALL_TYPE_FRONT;
             clocks = 0;
+        } else {
+            bc_timer_add_cycles(cpu, last_clocks - clocks);
         }
+
+        last_clocks = clocks;
     }
 }
 

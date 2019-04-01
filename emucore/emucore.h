@@ -69,22 +69,35 @@ typedef struct lr35902 {
     cpu_mmap_t mem;
     const insn_desc_t *current_instruction;
     uint16_t instruction_param;
-    /* Cycles leftover for current ISR.
-     * It takes 5 machine cycles to start executing an ISR. */
-    uint32_t cycles_for_irq;
-    /* Cycles leftover for current instruction. */
-    uint32_t cycles_for_insn;
+
     /* Stall after executing current instruction, for branches, etc. */
     uint32_t cycles_for_stall;
     uint32_t stalled_cycles;
+    /* There are two types of stalls: front stalls, which fill in the time that an
+     * instruction would take to execute in the case that the budget given to bc_step
+     * isn't enough to actually execute the next instruction. When the stall is finished,
+     * the stalled clocks are added back into the budget so that 
+     *     (instruction cycles) == stall cycles + budget at the time of stall. 
+     * The second type is the back stall, which simulate work that takes place outside an
+     * instruction, i.e. the extra cost from jumps (see IMP_call_ret_absolute), and 
+     * interrupts (jumping to an ISR address takes 20 cycles).
+     * These stalls DO NOT add their time back to the budget, since it was spent doing 
+     * "real work". */
+    uint32_t stall_counts_towards_budget;
 
-    uint32_t current_clock;
-    uint32_t timer_last_clock;
-    uint32_t div_last_clock;
-    uint32_t clocks_per_timer;
-    uint32_t timer_count;
+    /* Clock source for both timer and divider regs.
+     * It ticks once every 16 cycles. */
+    uint32_t clock_leftover;
+    /* Increment DIV register whenever this ticks over 16. */
+    uint32_t div_clock;
+    /* Increment TIMA register whenever this ticks over tac_freq */
+    uint32_t timer_clock;
+    /* user configured timer frequency */
+    uint32_t tac_freq;
+
     uint8_t div;
     uint8_t tima;
+    uint8_t timer_enable;
 
     /* Global halt. */
     uint8_t stop;
@@ -156,7 +169,7 @@ static inline uint16_t bc_convertsignedvalue16(int16_t val) {
         return (uint16_t)((int)val + 65536);
     }
 }
-static inline int bc_convertunsignedvalue(uint8_t val) {
+static inline int8_t bc_convertunsignedvalue(uint8_t val) {
     if (val > 127) {
         return *(int8_t *)&val;
     }

@@ -250,7 +250,7 @@ insn_desc_t const instructions[256] = {
     INSN_ENTRY(0xf5, 0, 16, IMP_push_pair),
     INSN_ENTRY(0xf6, 1,  8, IMP_insn_or8),
     INSN_ENTRY(0xf7, 0, 16, IMP_rst_vec),
-    INSN_ENTRY(0xf8, 1, 12, IMP_insn_mov_sp_to_hl),
+    INSN_ENTRY(0xf8, 1, 12, IMP_insn_add_sp_imm8),
     INSN_ENTRY(0xf9, 0,  8, IMP_insn_ld_16s),
     INSN_ENTRY(0xfa, 2, 16, IMP_insn_ld_absolute),
     INSN_ENTRY(0xfb, 0,  4, IMP_edi),

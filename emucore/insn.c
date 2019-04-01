@@ -1,4 +1,5 @@
 #include "emucore.h"
+#include "emucore_internal.h"
 #include "insn.h"
 
 static void IMP_undefined_instruction(bc_cpu_t *cpu, int opcode, int cycle, int param) {
@@ -477,30 +478,6 @@ static void IMP_insn_add_regs(bc_cpu_t *cpu, int opcode, int cycle, int param) {
 }
 
 static void IMP_insn_add_sp_imm8(bc_cpu_t *cpu, int opcode, int cycle, int param) {
-    int add_val = param; // bc_convertunsignedvalue(param);
-    uint8_t new_cpsr = 0;
-
-    if (add_val < 0) {
-        if (((int)(cpu->regs.SP & 0xfff) + add_val) < 0) {
-            new_cpsr |= FLAG_HALF_CARRY;
-        }
-    } else {
-        if (((cpu->regs.SP & 0xfff) + add_val) & 0x1000) {
-            new_cpsr |= FLAG_HALF_CARRY;
-        }
-    }
-
-    add_val = cpu->regs.SP + add_val;
-
-    if (add_val > 0xFFFF || add_val < 0) {
-        new_cpsr |= FLAG_CARRY;
-    }
-    
-    cpu->regs.CPSR = new_cpsr;
-    cpu->regs.SP = bc_convertsignedvalue16(add_val);
-}
-
-static void IMP_insn_mov_sp_to_hl(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     int is_sub = 0;
     int add_val = bc_convertunsignedvalue(param);
     if (add_val < 0) {
@@ -511,23 +488,29 @@ static void IMP_insn_mov_sp_to_hl(bc_cpu_t *cpu, int opcode, int cycle, int para
     uint8_t new_cpsr = 0;
 
     if (is_sub) {
-        if (((int)(cpu->regs.SP & 0xfff) - add_val) < 0) {
+        add_val = cpu->regs.SP - add_val;
+        if ((add_val & 0xf) < (cpu->regs.SP & 0xf)) {
             new_cpsr |= FLAG_HALF_CARRY;
         }
-        add_val = cpu->regs.SP - add_val;
+        if ((add_val & 0xff) < (cpu->regs.SP & 0xff)) {
+            new_cpsr |= FLAG_CARRY;
+        }
     } else {
-        if (((cpu->regs.SP & 0xfff) + add_val) & 0x1000) {
+        if (((cpu->regs.SP & 0xf) + (add_val & 0xf)) & 0x10) {
             new_cpsr |= FLAG_HALF_CARRY;
+        }
+        if ((cpu->regs.SP & 0xff) + (add_val & 0xff) > 0xff) {
+            new_cpsr |= FLAG_CARRY;
         }
         add_val = cpu->regs.SP + add_val;
     }
 
-    if (add_val > 0xFFFF || add_val < 0) {
-        new_cpsr |= FLAG_CARRY;
-    }
-
     cpu->regs.CPSR = new_cpsr;
-    bc_regs_putpairvalue(&cpu->regs, PAIR_HL, add_val & 0xFFFF);
+    if (opcode == 0xE8) {
+        cpu->regs.SP = bc_convertsignedvalue16(add_val);
+    } else {
+        bc_regs_putpairvalue(&cpu->regs, PAIR_HL, add_val & 0xFFFF);
+    }
 }
 
 /* Push/pop */
@@ -651,7 +634,7 @@ static void IMP_jump_rel(bc_cpu_t *cpu, int opcode, int cycle, int param) {
         cpu->regs.PC += go;
         // If a branch is taken, this instruction takes 12 clocks.
         // If not, it only takes 8.
-        cpu->cycles_for_stall = 4;
+        bc_cpu_stall(cpu, 4, STALL_TYPE_BACK);
     
         // debug_log("%x %x", opcode, go);
 
@@ -684,7 +667,7 @@ static void IMP_jump_absolute(bc_cpu_t *cpu, int opcode, int cycle, int param) {
         cpu->regs.PC = param;
         // If a branch is taken, this instruction takes 16 clocks.
         // If not, it only takes 12.
-        cpu->cycles_for_stall = 4;
+        bc_cpu_stall(cpu, 4, STALL_TYPE_BACK);
     }
 }
 
@@ -718,7 +701,7 @@ static void IMP_call_ret_absolute(bc_cpu_t *cpu, int opcode, int cycle, int para
         // If not, it only takes 12/8.
         // debug_log("%x %x; PC now %x", opcode, param, cpu->regs.PC);
         // getchar();
-        cpu->cycles_for_stall = 12;
+        bc_cpu_stall(cpu, 12, STALL_TYPE_BACK);
     }
 }
 #undef MATCH_CPSR

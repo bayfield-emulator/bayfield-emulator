@@ -78,6 +78,7 @@ void bc_mmap_putvalue(cpu_mmap_t *mmap, uint16_t addr, uint8_t value) {
 
     /* Make sure to save the master flag */
     if (addr == 0xFFFF) {
+        debug_log("irq mask put %x", value);
         mmap->cpu->irq_mask = value | (mmap->cpu->irq_mask & IF_MASTER);
     }
 
