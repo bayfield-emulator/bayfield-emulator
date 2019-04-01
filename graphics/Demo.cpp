@@ -108,6 +108,12 @@ int main(int argc, char const *argv[]) {
 	SDL_Surface* sprite_buffer = SDL_CreateRGBSurface(0, 256, 256, 32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
 	main_gpu->setSpriteBufferAddress((uint32_t *) sprite_buffer->pixels);
 
+	//set background buffer as our external Surface (for debugging reasons)
+	SDL_Surface* win_buffer = SDL_CreateRGBSurface(0, 256, 256, 32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+	main_gpu->setWindowBufferAddress((uint32_t *) win_buffer->pixels);
+
+	cout << "First, draw a background of diagonal stripes.\n\tSee bg_buffer.bmp to confirm." << endl;
+
 	//add background tiles to VRAM
 	main_gpu->add_bg_tile(0, whiteBlock);
 	main_gpu->add_bg_tile(1, lightgreyBlock);
@@ -124,6 +130,8 @@ int main(int argc, char const *argv[]) {
 	//draw background to buffer
 	main_gpu->draw_bg();
 
+	cout << "Next, draw a small checkerboard pattern with sprites near bottom right.\n\tSee spr_buffer.bmp to confirm." << endl;
+
 	//add sprite tiles to VRAM
 	main_gpu->add_sprite_tile(0, whiteBlock);
 	main_gpu->add_sprite_tile(1, lightgreyBlock);
@@ -132,16 +140,33 @@ int main(int argc, char const *argv[]) {
 
 	//generate some sprite data, add to OAM
 	uint8_t id = 0;
-	for (int y = 4; y < 36; y+=8) {
-		for (int x = 4; x < 68; x+=8) {
+	for (int y = 108; y < 140; y+=8) {
+		for (int x = 92; x < 156; x+=8) {
 			main_gpu->set_sprite_data(id, x + 8, y + 8, ((id) % 4), 0x00);
 			id++;
 		}
 		id++;
 	}
 
-	//draw sprites to buffer
 	main_gpu->draw_sprites();
+
+	cout << "Then create the window. It's all black with a single white block to help identify offset.\n\tSee win_buffer.bmp to confirm." << endl;
+
+	//draw sprites to buffer
+	main_gpu->set_win_pos(16, 16);
+
+	//generate window (all black)
+	for (int y = 0; y < 32; y++) {
+		for (int x = 0; x < 32; x++) {
+			main_gpu->set_window_tile(x, y, 3);
+		}
+	}
+
+	main_gpu->set_window_tile(3, 3, 0);
+
+	main_gpu->draw_window();
+
+	cout << "Finally, combine all the layers into the correctly sized frame (160 x 144).\n\tSee raw_frame.bmp for final output and to confirm offsets are correct." << endl;
 
 	//copy buffer to window
 	//includes scroll register offsets for background
@@ -156,6 +181,9 @@ int main(int argc, char const *argv[]) {
 
 	//dump background buffer contents
 	SDL_SaveBMP(sprite_buffer, "spr_buffer.bmp");
+
+	//dump background buffer contents
+	SDL_SaveBMP(win_buffer, "win_buffer.bmp");
 
 	//While application is running
 	while (!quit) {

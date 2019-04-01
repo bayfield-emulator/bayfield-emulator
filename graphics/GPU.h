@@ -36,6 +36,7 @@ class GPU {
 		uint8_t* TILES_BG;			// Start of background tile data
 		uint8_t* TILES_SPRITES;		// Start of sprite tile data
 		uint8_t* BG_MAP;			// Start of background map
+		uint8_t* WINDOW_MAP;		// Start of window map
 		uint32_t* OAM; 				// Start of OAM (sprite metadata)
 
 		/* BUFFERS */
@@ -50,7 +51,6 @@ class GPU {
 		void clear(); // Write value to display to 'turn it off'
 
 		const uint32_t PALETTE[4] = {0xFFFFFFFF, 0xFFA8A8A8, 0xFF545454, 0xFF000000};
-		// const uint32_t PALETTE[4] = {0xFF000000, 0xFF545454, 0xFFA8A8A8, 0xFFFFFFFF};
 
 	public:
 
@@ -89,8 +89,14 @@ class GPU {
 		/* Set background tile [id] to background map at [x] [y] */
 		void set_bg_tile(int x, int y, int id);
 
+		/* Set background tile [id] to background map at [x] [y] */
+		void set_window_tile(int x, int y, int id);
+
 		/* Set scroll register values (absolute) */
 		void set_scroll(int8_t x, int8_t y);
+
+		/* Set the window's coordinates */
+		void set_win_pos(uint8_t x, uint8_t y);
 
 		/* Render sprites to buffer */
 		void draw_sprites(); //not done yet
