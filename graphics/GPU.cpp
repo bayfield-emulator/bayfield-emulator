@@ -22,8 +22,9 @@ GPU::GPU() {
 	VRAM = (uint8_t *) malloc(sizeof(uint8_t) * 8 * KB);
 	// BG_BUFFER = (uint32_t *) malloc(sizeof(uint32_t) * 256 * 256); // IF YOU RE-ENABLE THIS... (SEE DESTRUCTOR)
 	TILES_BG = VRAM;
-	TILES_SPRITES = VRAM + (4 * KB);
-	BG_MAP = VRAM + (12 * KB);
+	TILES_SPRITES = VRAM + (2 * KB);
+	BG_MAP = VRAM + (6 * KB);
+	WINDOW_MAP = VRAM + (7 * KB);
 	OAM = (uint32_t *) malloc(sizeof(uint32_t) * 40);
 	memset(BG_MAP, 0xFF, (sizeof(uint8_t) * 32 * 32));
 	memset(OAM, 0x00, (sizeof(uint32_t) * 40));
