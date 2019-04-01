@@ -114,11 +114,18 @@ int main(int argc, char const *argv[]) {
     while (!global_cpu->stop) {
         bc_cpu_step(global_cpu, 1);
 
-        if (bc_mmap_getvalue(&global_cpu->mem, global_cpu->regs.PC + 1) == 0x37) {
-            //stepping = 1;
+        if (global_cpu->regs.PC == 0xc317) {
+            // stepping = 1;
         }
         
         if (pc != global_cpu->regs.PC && stepping) {
+            const char *s = "";
+            uint8_t is = bc_mmap_getvalue(&global_cpu->mem, global_cpu->regs.PC);
+            if (is == 0xcb) {
+                is = bc_mmap_getvalue(&global_cpu->mem, global_cpu->regs.PC);
+                s = "CB ";
+            }
+            printf("\nNext instruction: %s%x\n", s, is);
             dump_regs();
             getchar();
             pc = global_cpu->regs.PC;
