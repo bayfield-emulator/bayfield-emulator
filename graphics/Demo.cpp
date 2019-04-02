@@ -104,11 +104,11 @@ int main(int argc, char const *argv[]) {
 	SDL_Surface* bg_buffer = SDL_CreateRGBSurface(0, 256, 256, 32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
 	main_gpu->setBgBufferAddress((uint32_t *) bg_buffer->pixels);
 
-	//set background buffer as our external Surface (for debugging reasons)
+	//set sprite buffer as our external Surface (for debugging reasons)
 	SDL_Surface* sprite_buffer = SDL_CreateRGBSurface(0, 256, 256, 32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
 	main_gpu->setSpriteBufferAddress((uint32_t *) sprite_buffer->pixels);
 
-	//set background buffer as our external Surface (for debugging reasons)
+	//set window buffer as our external Surface (for debugging reasons)
 	SDL_Surface* win_buffer = SDL_CreateRGBSurface(0, 256, 256, 32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
 	main_gpu->setWindowBufferAddress((uint32_t *) win_buffer->pixels);
 

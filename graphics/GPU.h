@@ -11,6 +11,35 @@ NICK
 #define KB 1024
 #define SCREEN_OFF_COLOUR 0xFFDEDEDE
 
+/* LCDC BITS */
+#define ENABLE_LCD_DISPLAY 		0x80 // Display toggle
+#define SELECT_WINDOW_MAP 		0x40 // Which section of memory the window should draw it's mapping from
+#define ENABLE_WINDOW 			0x20 // Window toggle
+#define SELECT_BG_WIN_TILE 		0x10 // Which section of memory the background and window should take tiles from
+#define SELECT_BG_MAP 			0x08 // Which section of memory the background should draw it's mapping from
+#define SIZE_OBJ 				0x04 // Sprite mode (8x8 or 8x16)
+#define ENABLE_OBJ 				0x02 // Sprite toggle
+#define ENABLE_BG_WIN_DISPLAY 	0x01 // Combined background & window toggle
+
+/* TODO: 
+	BIT 6 - Might be required
+	BIT 4 - Might be required
+	BIT 3 - Might be required
+	BIT 2 - Unlikely to be required
+*/
+
+/* LCD STATUS BITS */
+#define INTR_LYC_EQ_LY 	0x40 // LY_CMP register check toggle
+#define INTR_OAM		0x20 // GPU is in OAM read [MODE 2]
+#define INTR_V_BLANK	0x10 // GPU is in V-Blank [MODE 1]
+#define INTR_H_BLANK	0x08 // GPU is in H-Blank [MODE 0]
+#define FLAG_LYC		0x04 // LYC compairison mode
+#define FLAG_MODE		0x03 // GPU mode [0 to 3]
+
+/* TODO:
+	ALL BITS
+*/
+
 #ifndef GB_GPU_H
 #define GB_GPU_H
 

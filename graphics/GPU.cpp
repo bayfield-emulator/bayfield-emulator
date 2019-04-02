@@ -91,7 +91,7 @@ void GPU::add_sprite_tile(int id, uint8_t* sprite) {
 	memcpy((void *) dest, (void *) sprite, TILE_SIZE);
 }
 
-//add a sprite's to OAM memory
+//add a sprite's data to OAM memory
 void GPU::set_sprite_data(uint8_t pos, uint8_t x, uint8_t y, uint8_t id, uint8_t misc) {
 	uint32_t* oam_pos = OAM + pos;
 	*oam_pos = (x << 24) + (y << 16) + (id << 8) + misc;
@@ -102,7 +102,7 @@ void GPU::set_bg_tile(int x, int y, int id) {
 	BG_MAP[x + y * 32] = id;
 }
 
-//set an area in backgroud to render as tile [id] from backgroud/shared VRAM
+//set an area in window to render as tile [id] from backgroud/shared VRAM
 void GPU::set_window_tile(int x, int y, int id) {
 	WINDOW_MAP[x + y * 32] = id;
 }
@@ -113,6 +113,7 @@ void GPU::set_scroll(int8_t x, int8_t y) {
 	GPU_REG_SCROLLX = x;
 }
 
+//set the window's x and y position. WX MUST NEVER BE < 7.
 void GPU::set_win_pos(uint8_t x, uint8_t y) {
 	GPU_REG_WINDOWX = x;
 	GPU_REG_WINDOWY = y;
@@ -258,7 +259,7 @@ void GPU::draw_bg() {
 
 //assemble all buffers and produce final frame
 void GPU::render() {
-	if (!GPU_REG_LCD_CONTROL & 0x80) { //display 'turned off' so clear it and return
+	if (!GPU_REG_LCD_CONTROL & ENABLE_LCD_DISPLAY) { //display 'turned off' so clear it and return
 		clear();
 		GPU_REG_LCDCUR_Y = 0; //may not be required, just a guess
 		return;
@@ -274,35 +275,38 @@ void GPU::render() {
 
 		for (uint8_t x = 0; x < 160; x++) {
 
-			// calculate horizontal shift
-			uint8_t shifted_x = (x + GPU_REG_SCROLLX);
-			uint8_t win_x = (x - GPU_REG_WINDOWX - 7); //7 is a hardcoded value for reasons only Nintendo knows
+			// check if background and window are enabled
+			if (GPU_REG_LCD_CONTROL & ENABLE_BG_WIN_DISPLAY) {
 
-			// copy background buffer over, if background draw enabled
-			if (GPU_REG_LCD_CONTROL & 0x01) WINDOW_MEMORY[x + 160 * y] = BG_BUFFER[shifted_x + 256 * shifted_y];
+				// calculate horizontal shift
+				uint8_t shifted_x = (x + GPU_REG_SCROLLX);
+				uint8_t win_x = (x - GPU_REG_WINDOWX - 7); //7 is a hard-coded value for reasons only Nintendo knows
 
-			// copy window buffer over, if window draw enabled
-			if (GPU_REG_LCD_CONTROL & 0x20) {
-				if (y >= GPU_REG_WINDOWY && x >= GPU_REG_WINDOWX) WINDOW_MEMORY[x + 160 * y] = WINDOW_BUFFER[win_x + 256 * win_y];
+				// copy background buffer over
+				WINDOW_MEMORY[x + 160 * y] = BG_BUFFER[shifted_x + 256 * shifted_y];
+
+				// copy window buffer over, if window draw enabled
+				if (GPU_REG_LCD_CONTROL & ENABLE_WINDOW) {
+					if (y >= GPU_REG_WINDOWY && x >= GPU_REG_WINDOWX) WINDOW_MEMORY[x + 160 * y] = WINDOW_BUFFER[win_x + 256 * win_y];
+				}
 			}
 
 			// copy sprite buffer over, if sprite draw enabled
-			if (GPU_REG_LCD_CONTROL & 0x02) {
+			if (GPU_REG_LCD_CONTROL & ENABLE_OBJ) {
 				// ignore transparent pixels
 				if (SPRITE_BUFFER[x + y * 256] >> 24) WINDOW_MEMORY[x + y * 160] = SPRITE_BUFFER[x + y * 256];
 			}
 		}
 		/* H-BLANK */
-		if (GPU_REG_LCD_STATUS & 0x08); //if H-Blank interrupts were enabled, that would happen here
+		if (GPU_REG_LCD_STATUS & INTR_H_BLANK); //if H-Blank interrupts were enabled, that would happen here
 	}
 	/* V-BLANK */
-	if (GPU_REG_LCD_STATUS & 0x10); //if V-Blank interrupts were enabled, that would happen here
+	if (GPU_REG_LCD_STATUS & INTR_V_BLANK); //if V-Blank interrupts were enabled, that would happen here
 }
 
 /* TODO */
 // Sprite memory offset should be adjustable based on register setting
 // Interrupts
-// Sprite rendering
-// Window rendering
 // Finish registers
 // Return from render() after each line, recover y pos from LCDCUR_Y each call
+// Check default register values

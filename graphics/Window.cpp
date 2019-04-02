@@ -36,8 +36,7 @@ Window::Window(int w, int h, bool visible) {
 		SDL_WINDOWPOS_UNDEFINED, w, h, (visible) ? SDL_WINDOW_SHOWN : SDL_WINDOW_HIDDEN);
 
 	surface = SDL_GetWindowSurface(window);
-	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED || SDL_RENDERER_PRESENTVSYNC); 
-	/* PRESENTVSYNC CAN CAUSE BAD TEARING */
+	renderer = SDL_GetRenderer(window);
 }
 
 Window::~Window() {
