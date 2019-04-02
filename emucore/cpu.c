@@ -126,7 +126,6 @@ static int do_instruction(bc_cpu_t *cpu, int budget) {
 
 void bc_cpu_step(bc_cpu_t *cpu, int ncycles) {
     int clocks = ncycles * 4;
-    int last_clocks = clocks;
     while (clocks) {
         //debug_log("proc loop: starting with %d budget", clocks);
         if (cpu->cycles_for_stall) {
@@ -139,13 +138,15 @@ void bc_cpu_step(bc_cpu_t *cpu, int ncycles) {
                 clocks = 0;
             } else {
                 clocks = leftover + ((cpu->stalled_cycles + cpu->cycles_for_stall) & cpu->stall_counts_towards_budget);
+                if (!cpu->stall_counts_towards_budget) {
+                    // debug_log("Adding %d clocks from previous stall", cpu->stalled_cycles + cpu->cycles_for_stall);
+                    bc_timer_add_cycles(cpu, cpu->stalled_cycles + cpu->cycles_for_stall);
+                }
                 cpu->cycles_for_stall = 0;
                 // debug_log("stall did complete - new budget: %d", clocks);
-                bc_timer_add_cycles(cpu, cpu->stalled_cycles);
                 cpu->stalled_cycles = 0;
             }
 
-            last_clocks = clocks;
             continue;
         }
 
@@ -158,7 +159,6 @@ void bc_cpu_step(bc_cpu_t *cpu, int ncycles) {
             if (clocks >= 16) {
                 bc_timer_add_cycles(cpu, 16);
                 clocks -= 16;
-                last_clocks = clocks;
             } else {
                 bc_timer_add_cycles(cpu, clocks);
                 clocks = 0;
@@ -167,20 +167,16 @@ void bc_cpu_step(bc_cpu_t *cpu, int ncycles) {
         }
 
         fetch_current_instruction(cpu);
-        clocks = do_instruction(cpu, clocks);
-        //debug_log("clocks: %d", clocks);
-
-        if (clocks < 0) {
-            //debug_log("Ran out of time so we have to save this inst for next call to bc_step");
-            cpu->cycles_for_stall = -clocks;
-            cpu->stalled_cycles = cpu->current_instruction->ncycles - -clocks;
+        if (cpu->current_instruction->ncycles > clocks) {
+            cpu->cycles_for_stall = cpu->current_instruction->ncycles - clocks;
+            cpu->stalled_cycles = clocks;
             cpu->stall_counts_towards_budget = STALL_TYPE_FRONT;
             clocks = 0;
         } else {
-            bc_timer_add_cycles(cpu, last_clocks - clocks);
+            bc_timer_add_cycles(cpu, cpu->current_instruction->ncycles);
+            do_instruction(cpu, clocks);
+            clocks -= cpu->current_instruction->ncycles;
         }
-
-        last_clocks = clocks;
     }
 }
 

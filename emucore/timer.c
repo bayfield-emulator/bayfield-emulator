@@ -5,6 +5,7 @@
 void bc_timer_add_cycles(bc_cpu_t *cpu, int nclocks) {
     uint32_t budget = cpu->clock_leftover + nclocks;
     cpu->clock_leftover = budget % 16;
+    // debug_log("adding %d cycles to clock, %d used, %d leftover", nclocks, budget, cpu->clock_leftover);
 
     // ticks_passed will rarely be more than 1
     uint32_t ticks_passed = budget / 16;
@@ -20,14 +21,16 @@ void bc_timer_add_cycles(bc_cpu_t *cpu, int nclocks) {
 
     if (cpu->timer_clock + ticks_passed >= cpu->tac_freq) {
         uint32_t test = cpu->tima + ((cpu->timer_clock + ticks_passed) / cpu->tac_freq);
+        // debug_log("ticks_passed: %d", cpu->timer_clock + ticks_passed);
         // check overflow
         if ((test & 0xff) < cpu->tima) {
             // debug_log("irq flag goin up");
             bc_request_interrupt(cpu, IF_TIMER);
-            cpu->tima = cpu->mem.mmio_storage[0x06] + (test & 0xff);
+            cpu->tima = cpu->mem.mmio_storage[0x06]; // + (test & 0xff);
+            debug_log("TIMA: %u", cpu->tima);
         } else {
             cpu->tima = test & 0xff;
-            // debug_log("TIMA: %u", cpu->tima);
+            debug_log("TIMA: %u", cpu->tima);
         }
         cpu->timer_clock = (cpu->timer_clock + ticks_passed) % cpu->tac_freq;
     }
