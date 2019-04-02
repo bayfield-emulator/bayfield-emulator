@@ -4,7 +4,9 @@ NICK
 2019
 */
 
-#include <cstdint>
+#include <cstdint>	//standard number formats
+#include <string.h>	//memset
+#include <iostream> //malloc
 
 #define BUFFER_W_H 32
 #define TILE_SIZE 16

@@ -76,7 +76,7 @@ int main(int argc, char const *argv[]) {
 	//set up window
 	Window* win = new Window(WINDOW_W, WINDOW_H);
 	win->setTitle(string(TITLE));
-	win->setColour(255, 255, 255, 0);
+	win->setColour(255);
 	win->refresh(true);
 
 	//create background tile textures
