@@ -67,7 +67,7 @@ uint8_t bc_mmap_getvalue(cpu_mmap_t *mmap, uint16_t addr) {
         } else if (mmap->observers[slot].get == DEFAULT_FETCHER) {
             return mmap->mmio_storage[slot];
         } else {
-            return mmap->observers[slot].get(mmap->cpu, addr, mmap->mmio_storage[slot]);
+            return mmap->observers[slot].get(mmap->cpu, mmap->observers[slot].ctx, addr, mmap->mmio_storage[slot]);
         }
     }
 
@@ -95,7 +95,7 @@ void bc_mmap_putvalue(cpu_mmap_t *mmap, uint16_t addr, uint8_t value) {
         } else if (mmap->observers[slot].set == DEFAULT_OBSERVER) {
             mmap->mmio_storage[slot] = value;
         } else {
-            mmap->mmio_storage[slot] = mmap->observers[slot].set(mmap->cpu, addr, value);
+            mmap->mmio_storage[slot] = mmap->observers[slot].set(mmap->cpu, mmap->observers[slot].ctx, addr, value);
         }
         return;
     }

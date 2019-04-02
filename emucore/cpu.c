@@ -8,11 +8,11 @@
 #define CLOCKS_PER_SEC 4194304
 #define CLOCKS_PER_MACH 4
 
-static uint8_t cpu_user_get_irqs(bc_cpu_t *cpu, uint16_t addr, uint8_t saved_val) {
+static uint8_t cpu_user_get_irqs(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t saved_val) {
     return cpu->irqs;
 }
 
-static uint8_t cpu_user_set_irqs(bc_cpu_t *cpu, uint16_t addr, uint8_t write_val) {
+static uint8_t cpu_user_set_irqs(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t write_val) {
     cpu->irqs = write_val;
     return 0;
 }
@@ -23,11 +23,11 @@ bc_cpu_t *bc_cpu_init(void) {
     bc_mmap_alloc(&ret->mem);
     ret->mem.cpu = ret;
 
-    bc_mmap_add_mmio_observer(&ret->mem, 0xFF0F, cpu_user_set_irqs, cpu_user_get_irqs);
-    bc_mmap_add_mmio_observer(&ret->mem, 0xFF04, cpu_user_set_div, cpu_user_get_div);
-    bc_mmap_add_mmio_observer(&ret->mem, 0xFF05, cpu_user_set_tima, cpu_user_get_tima);
-    bc_mmap_add_mmio_observer(&ret->mem, 0xFF06, NULL, NULL);
-    bc_mmap_add_mmio_observer(&ret->mem, 0xFF07, cpu_user_set_tac, NULL);
+    bc_mmap_add_mmio_observer(&ret->mem, 0xFF0F, cpu_user_set_irqs, cpu_user_get_irqs, NULL);
+    bc_mmap_add_mmio_observer(&ret->mem, 0xFF04, cpu_user_set_div, cpu_user_get_div, NULL);
+    bc_mmap_add_mmio_observer(&ret->mem, 0xFF05, cpu_user_set_tima, cpu_user_get_tima, NULL);
+    bc_mmap_add_mmio_observer(&ret->mem, 0xFF06, NULL, NULL, NULL);
+    bc_mmap_add_mmio_observer(&ret->mem, 0xFF07, cpu_user_set_tac, NULL, NULL);
 
     return ret;
 }

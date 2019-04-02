@@ -12,11 +12,11 @@
 #define ISR_JOYPAD 0x60
 
 void bc_timer_add_cycles(bc_cpu_t *cpu, int nclocks);
-uint8_t cpu_user_get_div(bc_cpu_t *cpu, uint16_t addr, uint8_t saved_val);
-uint8_t cpu_user_set_div(bc_cpu_t *cpu, uint16_t addr, uint8_t write_val);
-uint8_t cpu_user_get_tima(bc_cpu_t *cpu, uint16_t addr, uint8_t saved_val);
-uint8_t cpu_user_set_tima(bc_cpu_t *cpu, uint16_t addr, uint8_t write_val);
-uint8_t cpu_user_set_tac(bc_cpu_t *cpu, uint16_t addr, uint8_t write_val);
+uint8_t cpu_user_get_div(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t saved_val);
+uint8_t cpu_user_set_div(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t write_val);
+uint8_t cpu_user_get_tima(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t saved_val);
+uint8_t cpu_user_set_tima(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t write_val);
+uint8_t cpu_user_set_tac(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t write_val);
 
 uint8_t *bc_mmap_calc(cpu_mmap_t *mem, uint16_t addr);
 

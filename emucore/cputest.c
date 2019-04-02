@@ -38,7 +38,7 @@ void dump_regs() {
         convert_cpsr(global_cpu->regs.CPSR));
 }
 
-uint8_t write_serial(bc_cpu_t *cpu, uint16_t addr, uint8_t write_val) {
+uint8_t write_serial(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t write_val) {
     static int did_first_header;
 
     if (write_val != 0x81) {
@@ -64,7 +64,7 @@ uint8_t write_serial(bc_cpu_t *cpu, uint16_t addr, uint8_t write_val) {
     return 0;
 }
 
-uint8_t write_serial_data(bc_cpu_t *cpu, uint16_t addr, uint8_t write_val) {
+uint8_t write_serial_data(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t write_val) {
     // printf("serial: %02x %c\n", write_val, write_val & 0x7f);
     // dump_regs();
     // getchar();
@@ -129,8 +129,8 @@ int main(int argc, char const *argv[]) {
     close(fd);
 
     bc_cpu_reset(global_cpu);
-    bc_mmap_add_mmio_observer(&global_cpu->mem, 0xFF01, write_serial_data, NULL);
-    bc_mmap_add_mmio_observer(&global_cpu->mem, 0xFF02, write_serial, NULL);
+    bc_mmap_add_mmio_observer(&global_cpu->mem, 0xFF01, write_serial_data, NULL, NULL);
+    bc_mmap_add_mmio_observer(&global_cpu->mem, 0xFF02, write_serial, NULL, NULL);
 
     int stepping = 0;
     uint16_t pc = global_cpu->regs.PC;
