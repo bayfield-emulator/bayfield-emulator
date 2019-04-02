@@ -4,9 +4,13 @@
 #include "emucore_internal.h"
 #include "insn.h"
 
-#define MMIO_INT_FLAG_INDEX 0x0F
 #define CLOCKS_PER_SEC 4194304
 #define CLOCKS_PER_MACH 4
+
+#if SIMULATE_PIPELINE
+uint64_t n_instructions;
+uint64_t n_fetch_fails;
+#endif
 
 static uint8_t cpu_user_get_irqs(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t saved_val) {
     return cpu->irqs;
@@ -81,8 +85,8 @@ static int do_interrupts(bc_cpu_t *cpu) {
     return 0;
 }
 
-static void fetch_current_instruction(bc_cpu_t *cpu) {
-    uint8_t *insn_loc = bc_mmap_calc(&cpu->mem, cpu->regs.PC);
+static void fetch_instruction(bc_cpu_t *cpu, uint16_t where) {
+    uint8_t *insn_loc = bc_mmap_calc(&cpu->mem, where);
     // debug_log("calced ip: %x for pc: %x", insn_loc - cpu->mem.rom->bank1, cpu->regs.PC);
     uint8_t op = *insn_loc;
     const insn_desc_t *t;
@@ -102,15 +106,8 @@ static void fetch_current_instruction(bc_cpu_t *cpu) {
     }
 
     cpu->current_instruction = t;
-    cpu->pc_of_current_instruction = cpu->regs.PC;
+    cpu->pc_of_current_instruction = where;
     cpu->instruction_param = param;
-}
-
-static void do_instruction(bc_cpu_t *cpu) {
-    const insn_desc_t *t = cpu->current_instruction;
-    cpu->regs.PC += t->param_count + 1;
-    // debug_log("Executing instruction: %x", t->opcode);
-    t->executor(cpu, t->opcode, 0, cpu->instruction_param);
 }
 
 void bc_cpu_step(bc_cpu_t *cpu, int clocks) {
@@ -150,17 +147,32 @@ void bc_cpu_step(bc_cpu_t *cpu, int clocks) {
         }
 
         if (cpu->regs.PC != cpu->pc_of_current_instruction) {
-            fetch_current_instruction(cpu);
+            fetch_instruction(cpu, cpu->regs.PC);
+            #if SIMULATE_PIPELINE
+            n_fetch_fails++;
+            #endif
         }
+
         if (cpu->current_instruction->ncycles > clocks) {
             cpu->cycles_for_stall = cpu->current_instruction->ncycles - clocks;
             cpu->stalled_cycles = clocks;
             cpu->stall_counts_towards_budget = STALL_TYPE_FRONT;
             break;
         } else {
-            do_instruction(cpu);
-            bc_timer_add_cycles(cpu, cpu->current_instruction->ncycles);
-            clocks -= cpu->current_instruction->ncycles;
+            const insn_desc_t *t = cpu->current_instruction;
+            uint16_t save_pc = cpu->regs.PC;
+            uint16_t save_param = cpu->instruction_param;
+            cpu->regs.PC += t->param_count + 1;
+
+            #if SIMULATE_PIPELINE
+            // Fetch the next instruction "concurrently" with executor.
+            fetch_instruction(cpu, save_pc + t->param_count + 1);
+            n_instructions++;
+            #endif
+
+            t->executor(cpu, t->opcode, 0, save_param);
+            bc_timer_add_cycles(cpu, t->ncycles);
+            clocks -= t->ncycles;
         }
     }
 }

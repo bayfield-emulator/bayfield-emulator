@@ -10,6 +10,11 @@ static bc_cpu_t *global_cpu;
 static char serial_port[41];
 static int serial_ptr = 0;
 
+#if SIMULATE_PIPELINE
+extern uint64_t n_instructions;
+extern uint64_t n_fetch_fails;
+#endif
+
 const char *convert_cpsr(int cpsr) {
     static char s[5] = {0};
     if (!s[0]) {
@@ -88,6 +93,9 @@ void panic(const char *fmt, ...) {
     fclose(f);
 
     printf("Dumped emucore's ram to emumem.dmp!\n");
+    #if SIMULATE_PIPELINE
+    printf("Instructions executed: %u \tmisfetched: %u\n", n_instructions, n_fetch_fails);
+    #endif
     exit(1);
 }
 
