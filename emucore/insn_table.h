@@ -26,7 +26,7 @@ insn_desc_t const instructions[256] = {
     INSN_ENTRY(0x15, 0,  4, IMP_insn_incr8),
     INSN_ENTRY(0x16, 1,  8, IMP_insn_ld_immediate),
     INSN_ENTRY(0x17, 0,  4, IMP_rot_left),
-    INSN_ENTRY(0x18, 1, 12, IMP_jump_rel),
+    INSN_ENTRY(0x18, 1,  8, IMP_jump_rel), // 12 clk, but executor stalls 4
     INSN_ENTRY(0x19, 0,  8, IMP_insn_add_regs),
     INSN_ENTRY(0x1a, 0,  8, IMP_insn_ld_indirect),
     INSN_ENTRY(0x1b, 0,  8, IMP_insn_incdec16),
@@ -197,17 +197,17 @@ insn_desc_t const instructions[256] = {
     INSN_ENTRY(0xc0, 0,  8, IMP_call_ret_absolute),
     INSN_ENTRY(0xc1, 0, 12, IMP_pop_pair),
     INSN_ENTRY(0xc2, 2, 12, IMP_jump_absolute),
-    INSN_ENTRY(0xc3, 2, 16, IMP_jump_absolute),
+    INSN_ENTRY(0xc3, 2, 12, IMP_jump_absolute), // 16 clk, but executor stalls 4
     INSN_ENTRY(0xc4, 2, 12, IMP_call_ret_absolute),
     INSN_ENTRY(0xc5, 0, 16, IMP_push_pair),
     INSN_ENTRY(0xc6, 1,  8, IMP_insn_add8),
     INSN_ENTRY(0xc7, 0, 16, IMP_rst_vec),
     INSN_ENTRY(0xc8, 0,  8, IMP_call_ret_absolute),
-    INSN_ENTRY(0xc9, 0, 16, IMP_call_ret_absolute),
+    INSN_ENTRY(0xc9, 0,  4, IMP_call_ret_absolute), // 16 clk, but executor stalls 12
     INSN_ENTRY(0xca, 2, 12, IMP_jump_absolute),
     INSN_ENTRY(0xcb, 0,  4, NULL),
     INSN_ENTRY(0xcc, 2, 12, IMP_call_ret_absolute),
-    INSN_ENTRY(0xcd, 2, 24, IMP_call_ret_absolute),
+    INSN_ENTRY(0xcd, 2, 12, IMP_call_ret_absolute), // 24 clk, but executor stalls 12
     INSN_ENTRY(0xce, 1,  8, IMP_insn_add8),
     INSN_ENTRY(0xcf, 0, 16, IMP_rst_vec),
     INSN_ENTRY(0xd0, 0,  8, IMP_call_ret_absolute),
@@ -219,7 +219,7 @@ insn_desc_t const instructions[256] = {
     INSN_ENTRY(0xd6, 1,  8, IMP_insn_sub8),
     INSN_ENTRY(0xd7, 0, 16, IMP_rst_vec),
     INSN_ENTRY(0xd8, 0,  8, IMP_call_ret_absolute),
-    INSN_ENTRY(0xd9, 0, 16, IMP_reti),
+    INSN_ENTRY(0xd9, 0, 16, IMP_reti), 
     INSN_ENTRY(0xda, 2, 12, IMP_jump_absolute),
     INSN_ENTRY(0xdb, 0,  0, IMP_undefined_instruction),
     INSN_ENTRY(0xdc, 2, 12, IMP_call_ret_absolute),

@@ -607,8 +607,6 @@ static void IMP_rst_vec(bc_cpu_t *cpu, int opcode, int cycle, int param) {
         target = 0x28; break;
     case 0xff:
         target = 0x38; break;
-    default:
-        panic("should never get here");
     }
 
     bc_mmap_putstack16(&cpu->mem, cpu->regs.PC);

@@ -27,10 +27,10 @@ void bc_timer_add_cycles(bc_cpu_t *cpu, int nclocks) {
             // debug_log("irq flag goin up");
             bc_request_interrupt(cpu, IF_TIMER);
             cpu->tima = cpu->mem.mmio_storage[0x06]; // + (test & 0xff);
-            debug_log("TIMA: %u", cpu->tima);
+            // debug_log("TIMA: %u", cpu->tima);
         } else {
             cpu->tima = test & 0xff;
-            debug_log("TIMA: %u", cpu->tima);
+            // debug_log("TIMA: %u", cpu->tima);
         }
         cpu->timer_clock = (cpu->timer_clock + ticks_passed) % cpu->tac_freq;
     }
@@ -71,7 +71,6 @@ uint8_t cpu_user_set_tac(bc_cpu_t *cpu, uint16_t addr, uint8_t write_val) {
     }
 
     cpu->timer_enable = !!(write_val & 0x4);
-    debug_log("load %d to tac", write_val);
     cpu->timer_clock %= cpu->tac_freq;
 
     return write_val & 0x7;

@@ -91,20 +91,43 @@ void panic(const char *fmt, ...) {
     exit(1);
 }
 
+void setup_rom(bc_cpu_t *cpu, int fd) {
+    // Get entire image
+    size_t sz = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, 0);
+    uint8_t *mem = malloc(sz); 
+    read(fd, mem, sz);
+
+    cpu->mem.rom.image_size = sz;
+    cpu->mem.rom.rom = mem;
+    cpu->mem.rom.bank1 = mem;
+    cpu->mem.rom.bankx = mem + 16384;
+
+    int mbc = mem[0x0147];
+    printf("setup_rom:\n");
+    printf("\ttitle: %16s\n", mem + 0x0134);
+    printf("\tmbc: %d\n", mem[0x0147]);
+
+    cpu->mem.rom.mbc_type = mbc;
+}
+
+void setup_vram(bc_cpu_t *cpu) {
+    cpu->mem.vram = malloc(0x20A0);
+    cpu->mem.oam = cpu->mem.vram + 0x2000;
+}
+
 int main(int argc, char const *argv[]) {
+    global_cpu = bc_cpu_init();
+
     int fd = open(argv[1], O_RDONLY);
     if (!fd) {
         fputs("Usage: cputest <rom file>", stderr);
         return 1;
     }
-    cartridge_t *rom_memory = malloc(sizeof(cartridge_t) + 32768);
-    read(fd, rom_memory + 1, 32768);
-    rom_memory->image_size = 32768;
-    rom_memory->bank1 = rom_memory + 1;
-    rom_memory->bankx = (uint8_t *)(rom_memory + 1) + 16384;
+    setup_rom(global_cpu, fd);
+    setup_vram(global_cpu);
+    close(fd);
 
-    global_cpu = bc_cpu_init();
-    bc_mmap_take_rom(&global_cpu->mem, rom_memory);
     bc_cpu_reset(global_cpu);
     bc_mmap_add_mmio_observer(&global_cpu->mem, 0xFF01, write_serial_data, NULL);
     bc_mmap_add_mmio_observer(&global_cpu->mem, 0xFF02, write_serial, NULL);
@@ -112,9 +135,9 @@ int main(int argc, char const *argv[]) {
     int stepping = 0;
     uint16_t pc = global_cpu->regs.PC;
     while (!global_cpu->stop) {
-        bc_cpu_step(global_cpu, 1);
+        bc_cpu_step(global_cpu, 4);
 
-        if (global_cpu->regs.PC == 0xc317) {
+        if (global_cpu->regs.PC == 0xc2d6) {
             // stepping = 1;
         }
         

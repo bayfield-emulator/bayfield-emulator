@@ -24,11 +24,10 @@ uint8_t *bc_mmap_calc(cpu_mmap_t *mem, uint16_t addr);
 #define STALL_TYPE_BACK 0x0
 static inline void bc_cpu_stall(bc_cpu_t *cpu, int ncycles, uint32_t type) {
     // debug_log("adding stall for %d clocks", ncycles);
-    if (cpu->cycles_for_stall) {
-        panic("can't overlap stalls!");
-    }
+    debug_assert(cpu->cycles_for_stall == 0, "can't overlap stalls!");
     cpu->cycles_for_stall = ncycles;
     cpu->stall_counts_towards_budget = type;
+    bc_timer_add_cycles(cpu, ncycles);
 }
 
 #endif

@@ -2,16 +2,17 @@
 #include "insn.h"
 
 /* Sets up the fake insn_desc_t for a class of extended instructions. */
-#define DECL_CB_INSTRUCTION_PAIR(name, func) \
+#define DECL_CB_INSTRUCTION_PAIR_EX(name, func, ncycles_short, ncycles_long) \
     static void func(bc_cpu_t *cpu, int opcode, int cycle, int real_opcode); \
-    const insn_desc_t CB_INSN_LONG_##name = (insn_desc_t){0xcb, 1, 16, &func}; \
-    const insn_desc_t CB_INSN_SHORT_##name = (insn_desc_t){0xcb, 1, 8, &func}
+    const insn_desc_t CB_INSN_LONG_##name = (insn_desc_t){0xcb, 1, ncycles_long, &func}; \
+    const insn_desc_t CB_INSN_SHORT_##name = (insn_desc_t){0xcb, 1, ncycles_short, &func}
+#define DECL_CB_INSTRUCTION_PAIR(name, func) DECL_CB_INSTRUCTION_PAIR_EX(name, func, 8, 16);
 
 #define SELECT_CB_INSTRUCTION_PAIR(name, is_long) \
     ((is_long)? &CB_INSN_LONG_##name : &CB_INSN_SHORT_##name)
 
 DECL_CB_INSTRUCTION_PAIR(bit_set_or_clr, IMP_insn_set_res);
-DECL_CB_INSTRUCTION_PAIR(bit_select, IMP_insn_bit_sel);
+DECL_CB_INSTRUCTION_PAIR_EX(bit_select, IMP_insn_bit_sel, 8, 12);
 DECL_CB_INSTRUCTION_PAIR(rotate_right, IMP_rot_right_e);
 DECL_CB_INSTRUCTION_PAIR(rotate_left, IMP_rot_left_e);
 DECL_CB_INSTRUCTION_PAIR(rotate_right_replicate, IMP_rot_right_rep);

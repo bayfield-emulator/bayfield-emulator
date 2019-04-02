@@ -11,7 +11,7 @@ extern "C" {
 #include <stdio.h>
 
 #if DEBUG
-#define debug_assert(expr) do { if (!(expr)) panic("debug_assert:%s", #expr) } while(0)
+#define debug_assert(expr, msg) do { if (!(expr)) panic("debug_assert:%s, failing expr: %s in %s (%s:%d)", msg, #expr, __func__, __FILE__, __LINE__); } while(0)
 #define debug_log(s, ...) (fprintf(stderr, "(debug) in %s (%s:%d):" s "\n", __func__, __FILE__, __LINE__, ##__VA_ARGS__))
 #else
 #define debug_assert(expr) /**/
@@ -24,11 +24,22 @@ typedef struct lr35902_regs cpu_regs_t;
 typedef struct lr35902_mmap cpu_mmap_t;
 typedef struct lr35902 bc_cpu_t;
 
+typedef void (*bc_mbc_write_proc_t)(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
+typedef void (*bc_extram_write_proc_t)(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
+
 typedef struct cart {
     size_t image_size;
+    int mbc_type;
+    uint8_t *rom;
+    bc_mbc_write_proc_t mbc_handler;
+    /* The only reason this exists is because MBC2 carts only have 4 bits available per RAM byte,
+     * so we'll mask it on write. There is no read function, we do it directly out of extram. */
+    bc_extram_write_proc_t extram_handler;
+    void *mbc_context;
+
+    uint8_t *extram;
     uint8_t *bank1;
     uint8_t *bankx;
-    uint8_t rom[0];
 } cartridge_t;
 
 typedef struct lr35902_regs {
@@ -49,19 +60,20 @@ typedef uint8_t (*bc_mmio_observe_t)(bc_cpu_t *cpu, uint16_t addr, uint8_t write
 typedef uint8_t (*bc_mmio_fetch_t)(bc_cpu_t *cpu, uint16_t addr, uint8_t saved_val);
 
 typedef struct lr35902_mmap {
+    cartridge_t rom;
     bc_cpu_t *cpu;
-    cartridge_t *rom;
     uint8_t *all_ram;
     uint8_t *wram;
-    uint8_t *vram;
-    uint8_t *extram;
-    uint8_t *sprite;
-    uint8_t *zpg;
+    uint8_t *hram;
     uint8_t mmio_storage[128];
     struct cpu_mmio_observer {
         bc_mmio_fetch_t get;
         bc_mmio_observe_t set;
     } observers[128];
+
+    /* These exist outside of the internal ram allocation. */
+    uint8_t *vram;
+    uint8_t *oam;
 } cpu_mmap_t;
 
 typedef struct lr35902 {
@@ -180,9 +192,6 @@ static inline int8_t bc_convertunsignedvalue(uint8_t val) {
 
 void bc_mmap_alloc(cpu_mmap_t *target);
 void bc_mmap_release(cpu_mmap_t *target);
-/* The mmap takes ownership of the passed rom. If you want to free it, call bc_mmap_release_rom first. */
-void bc_mmap_take_rom(cpu_mmap_t *mmap, cartridge_t *rom);
-void bc_mmap_release_rom(cpu_mmap_t *mmap, cartridge_t *rom);
 
 /* Read/write memory. This is done in the context of CPU code, so MMIO observers will be called. */
 uint8_t bc_mmap_getvalue(cpu_mmap_t *mmap, uint16_t addr);
