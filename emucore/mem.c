@@ -16,8 +16,9 @@ void bc_mmap_alloc(cpu_mmap_t *target) {
     target->hram = ram + WRAM_SIZE;
 }
 
-void bc_mmap_add_mmio_observer(cpu_mmap_t *mmap, uint16_t addr, bc_mmio_observe_t write_proc, bc_mmio_fetch_t read_proc) {
+void bc_mmap_add_mmio_observer(cpu_mmap_t *mmap, uint16_t addr, bc_mmio_observe_t write_proc, bc_mmio_fetch_t read_proc, void *context) {
     int slot = addr - 0xFF00;
+    mmap->observers[slot].ctx = context;
     mmap->observers[slot].get = read_proc? read_proc : DEFAULT_FETCHER;
     mmap->observers[slot].set = write_proc? write_proc : DEFAULT_OBSERVER;
 }

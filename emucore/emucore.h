@@ -59,8 +59,8 @@ typedef struct lr35902_regs {
 } cpu_regs_t;
 
 /* write_val: value given by program code - you can return a different value to save to the register. */
-typedef uint8_t (*bc_mmio_observe_t)(bc_cpu_t *cpu, uint16_t addr, uint8_t write_val);
-typedef uint8_t (*bc_mmio_fetch_t)(bc_cpu_t *cpu, uint16_t addr, uint8_t saved_val);
+typedef uint8_t (*bc_mmio_observe_t)(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t write_val);
+typedef uint8_t (*bc_mmio_fetch_t)(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t saved_val);
 
 typedef struct lr35902_mmap {
     cartridge_t rom;
@@ -72,6 +72,7 @@ typedef struct lr35902_mmap {
     struct cpu_mmio_observer {
         bc_mmio_fetch_t get;
         bc_mmio_observe_t set;
+        void *ctx;
     } observers[128];
 
     /* These exist outside of the internal ram allocation. */
@@ -207,7 +208,9 @@ uint16_t bc_mmap_popstack16(cpu_mmap_t *mmap);
 
 /* Add an observer for a MMIO register. When the CPU writes to the register specified by addr,
  * write_proc will be called. The returned value is saved by the mmap, and will be passed to read_proc
- * the next time the CPU reads from the mmio reg. */
-void bc_mmap_add_mmio_observer(cpu_mmap_t *mmap, uint16_t addr, bc_mmio_observe_t write_proc, bc_mmio_fetch_t read_proc);
+ * the next time the CPU reads from the mmio reg. 
+ * New: The context will also be passed to both callbacks. */
+void bc_mmap_add_mmio_observer(cpu_mmap_t *mmap, uint16_t addr,
+    bc_mmio_observe_t write_proc, bc_mmio_fetch_t read_proc, void *context);
 
 #endif
