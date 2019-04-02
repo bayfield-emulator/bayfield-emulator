@@ -8,10 +8,15 @@ NICK
 #include <string.h>	//memset
 #include <iostream> //malloc
 
-#define BUFFER_W_H 32
-#define TILE_SIZE 16
-#define KB 1024
-#define SCREEN_OFF_COLOUR 0xFFDEDEDE
+#define BUFFER_W_H 			0x20
+#define TILE_SIZE 			0x10
+#define KB 					0x400
+#define SCREEN_OFF_COLOUR 	0xFFDEDEDE
+
+#define OAM_DELAY 		20
+#define TRANSFER_DELAY 	43
+#define H_BLANK_DELAY 	51
+#define V_BLANK_DELAY 	(10 * 114)
 
 /* LCDC BITS */
 #define ENABLE_LCD_DISPLAY 		0x80 // Display toggle
@@ -78,6 +83,9 @@ class GPU {
 		/* SDL_WINDOW RENDER DESTINATION */
 		uint32_t* WINDOW_MEMORY;
 
+		/* DELAY LIST */
+		uint8_t SPRITE_DELAY[144];
+
 		/* FUNCTIONS */ 
 		void clear(); // Write value to display to 'turn it off'
 
@@ -138,8 +146,8 @@ class GPU {
 		/* Render backgroud tiles to buffer */
 		void draw_bg();
 
-		/* Take all layers and copy them to the Window surface */
-		void render();
+		/* Simulate [clocks] cycles of the PPU*/
+		uint16_t render(uint16_t clocks);
 };
 
 #endif

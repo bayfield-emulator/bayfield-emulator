@@ -26,6 +26,7 @@ GPU::GPU() {
 	memset(BG_MAP, 0xFF, (sizeof(uint8_t) * 32 * 32));
 	memset(WINDOW_MAP, 0xFF, (sizeof(uint8_t) * 32 * 32));
 	memset(OAM, 0x00, (sizeof(uint32_t) * 40));
+	memset(SPRITE_DELAY, 0x00, (sizeof(uint8_t) * 144));
 }
 
 // destructor
@@ -141,6 +142,9 @@ void GPU::draw_sprites() {
 			// copy [tile -> buffer] loops
 			for (int16_t y = 0; y < 8; y++)	{
 				if (((int16_t) spr_y) + y < 0 || spr_y + y > 144) continue; //skip lines off screen
+
+				SPRITE_DELAY[spr_y + y]++;
+
 				for (int16_t x = 0; x < 8; x++) {
 					if (((int16_t) spr_x) + x < 0 || spr_x + x > 160) continue; //skip pixels off screen
 
@@ -255,11 +259,15 @@ void GPU::draw_bg() {
 }
 
 //assemble all buffers and produce final frame
-void GPU::render() {
+/*
+clocks: Number of cycles to simulate
+return: Number of cycles that were simulated
+*/
+uint16_t GPU::render(uint16_t clocks) {
 	if (!GPU_REG_LCD_CONTROL & ENABLE_LCD_DISPLAY) { //display 'turned off' so clear it and return
 		clear();
-		GPU_REG_LCDCUR_Y = 0; //may not be required, just a guess
-		return;
+		GPU_REG_LCDCUR_Y = 0;
+		return clocks;
 	}
 	for (uint8_t y = 0; y < 144; y++) {
 
@@ -299,6 +307,8 @@ void GPU::render() {
 	}
 	/* V-BLANK */
 	if (GPU_REG_LCD_STATUS & INTR_V_BLANK); //if V-Blank interrupts were enabled, that would happen here
+
+	return 0;
 }
 
 /* TODO */
