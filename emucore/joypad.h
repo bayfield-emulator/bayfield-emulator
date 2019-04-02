@@ -18,7 +18,7 @@ typedef struct joypad {
 	uint8_t button_state;
 } joyp_t;
 
-void joyp_reset(joyp_t *jpad);
+void joyp_init(joyp_t *jpad);
 void joyp_set(joyp_t *jpad, uint8_t direction, uint8_t buttons);
 /* jp_reg is the value of the joypad register in memory at 0xFF00.
    Used to select column.*/
