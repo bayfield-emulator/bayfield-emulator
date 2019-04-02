@@ -53,7 +53,7 @@ static int goto_isr_if_allowed(bc_cpu_t *cpu, int active, enum bc_int_flag flg, 
     return 0;
 }
 
-static int do_interrupts(bc_cpu_t *cpu, int budget) {
+static int do_interrupts(bc_cpu_t *cpu) {
     if (!(cpu->irq_mask & IF_MASTER)) {
         if (cpu->irqs) {
             if (cpu->halt) {
@@ -102,21 +102,17 @@ static void fetch_current_instruction(bc_cpu_t *cpu) {
     }
 
     cpu->current_instruction = t;
+    cpu->pc_of_current_instruction = cpu->regs.PC;
     cpu->instruction_param = param;
 }
 
-static int do_instruction(bc_cpu_t *cpu, int budget) {
+static void do_instruction(bc_cpu_t *cpu, int budget) {
     const insn_desc_t *t = cpu->current_instruction;
     uint16_t param = cpu->instruction_param;
     if (t->ncycles <= budget) {
         cpu->regs.PC += t->param_count + 1;
         // debug_log("Executing instruction: %x", t->opcode);
         t->executor(cpu, t->opcode, 0, param);
-        return budget - t->ncycles;
-    } else {
-        //debug_log("Not enough time: %d %d", t->ncycles, budget);
-        // Save for later
-        return -(t->ncycles - budget);
     }
 }
 
@@ -140,7 +136,7 @@ void bc_cpu_step(bc_cpu_t *cpu, int clocks) {
             continue;
         }
 
-        if (do_interrupts(cpu, clocks)) {
+        if (do_interrupts(cpu)) {
             continue;
         }
 
@@ -156,7 +152,9 @@ void bc_cpu_step(bc_cpu_t *cpu, int clocks) {
             continue;
         }
 
-        fetch_current_instruction(cpu);
+        if (cpu->regs.PC != cpu->pc_of_current_instruction) {
+            fetch_current_instruction(cpu);
+        }
         if (cpu->current_instruction->ncycles > clocks) {
             cpu->cycles_for_stall = cpu->current_instruction->ncycles - clocks;
             cpu->stalled_cycles = clocks;

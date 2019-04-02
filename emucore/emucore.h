@@ -82,6 +82,7 @@ typedef struct lr35902_mmap {
 typedef struct lr35902 {
     cpu_regs_t regs;
     cpu_mmap_t mem;
+    uint16_t pc_of_current_instruction;
     const insn_desc_t *current_instruction;
     uint16_t instruction_param;
 
