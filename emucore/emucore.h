@@ -23,6 +23,7 @@ typedef struct cart cartridge_t;
 typedef struct lr35902_regs cpu_regs_t;
 typedef struct lr35902_mmap cpu_mmap_t;
 typedef struct lr35902 bc_cpu_t;
+typedef struct mbc_context mbc_context_t;
 
 typedef void (*bc_mbc_write_proc_t)(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
 typedef void (*bc_extram_write_proc_t)(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
@@ -34,8 +35,10 @@ typedef struct cart {
     bc_mbc_write_proc_t mbc_handler;
     /* The only reason this exists is because MBC2 carts only have 4 bits available per RAM byte,
      * so we'll mask it on write. There is no read function, we do it directly out of extram. */
+    /* We will actually need a read handler if we implement RTC support. */
     bc_extram_write_proc_t extram_handler;
-    void *mbc_context;
+    mbc_context_t *mbc_context;
+    uint16_t extram_usable_size;
 
     uint8_t *extram;
     uint8_t *bank1;
@@ -205,9 +208,5 @@ uint16_t bc_mmap_popstack16(cpu_mmap_t *mmap);
  * write_proc will be called. The returned value is saved by the mmap, and will be passed to read_proc
  * the next time the CPU reads from the mmio reg. */
 void bc_mmap_add_mmio_observer(cpu_mmap_t *mmap, uint16_t addr, bc_mmio_observe_t write_proc, bc_mmio_fetch_t read_proc);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

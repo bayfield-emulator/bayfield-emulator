@@ -1,5 +1,7 @@
-OBJS = cpu.o mem.o insn.o timer.o insn_extended.o
-CFLAGS += -DDEBUG -Wall -g
+OBJS = cpu.o mem.o insn.o timer.o insn_extended.o mbc.o
+CFLAGS += -DDEBUG -Wall -g -O3
+
+all: cputest libemucore.a
 
 .phony: clean dotests
 

@@ -8,10 +8,6 @@
 #define CLOCKS_PER_SEC 4194304
 #define CLOCKS_PER_MACH 4
 
-static uint8_t cpu_mmio_unwritable(bc_cpu_t *cpu, uint16_t addr, uint8_t write_val) {
-    panic("cpu_mmio_unwritable: program attempted write to readonly MMIO register 0x%04x", addr);
-}
-
 static uint8_t cpu_user_get_irqs(bc_cpu_t *cpu, uint16_t addr, uint8_t saved_val) {
     return cpu->irqs;
 }
