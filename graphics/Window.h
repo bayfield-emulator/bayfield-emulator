@@ -4,6 +4,11 @@ NICK
 2019
 */
 
+#include <SDL2/SDL.h>	//SDL
+#include <cstdint>		//standard number formats
+#include <string>		//string type
+#include <string.h>		//memset
+
 #ifndef WINDOWOBJ_H
 #define WINDOWOBJ_H
 
@@ -14,12 +19,13 @@ private:
 
 	void clear();
 
-	void present();
+	uint8_t colour = 0;
+
+	int width, height;
 
 public:
 	SDL_Window* window;
 	SDL_Surface* surface;
-	SDL_Renderer* renderer;
 
 	Window() {}
 
@@ -35,7 +41,7 @@ public:
 
 	SDL_Surface* getSurface();
 
-	void setColour(int r, int g, int b, int flags);
+	void setColour(uint8_t s);
 
 	void hide();
 

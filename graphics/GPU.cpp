@@ -6,9 +6,6 @@ NICK
 
 #include "GPU.h"
 
-#include <iostream> //remove this when debugging is done
-#include <string.h>
-
 /* PRIVATE */
 
 void GPU::clear() {

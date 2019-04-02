@@ -3,7 +3,8 @@
 #include "emucore.h"
 #include "joypad.h"
 
-void joyp_reset(joyp_t *jpad) {
+void joyp_init(cpu_mmap_t *mmap, joyp_t *jpad) {
+	bc_mmap_add_mmio_observer(mmap, 0xFF00, 0, joyp_get_state);
 	// Note: (0 = pressed, 1 = unpressed)
 	jpad->direction_state = 0xFF;
 	jpad->button_state = 0xFF;

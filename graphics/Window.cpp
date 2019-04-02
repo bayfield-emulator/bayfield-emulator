@@ -4,9 +4,6 @@ NICK
 2019
 */
 
-#include <SDL2/SDL.h>
-#include <string>
-
 #include "Window.h"
 
 /* PRIVATE */
@@ -16,17 +13,11 @@ void Window::update() {
 }
 
 /*
-Overwrite the surface with the stored colour.
+Overwrite the surface with the stored shade of grey.
 */
 void Window::clear() {
-	SDL_RenderClear(renderer);
-}
-
-/*
-Draw the surface to the screen.
-*/
-void Window::present() {
-	SDL_RenderPresent(renderer);
+	// This can't be a colour because pixels are stored in 3 bytes.
+	memset(surface->pixels, colour, sizeof(uint8_t) * 3 * width * height);
 }
 
 /* PUBLIC */
@@ -36,12 +27,14 @@ Window::Window(int w, int h, bool visible) {
 		SDL_WINDOWPOS_UNDEFINED, w, h, (visible) ? SDL_WINDOW_SHOWN : SDL_WINDOW_HIDDEN);
 
 	surface = SDL_GetWindowSurface(window);
-	renderer = SDL_GetRenderer(window);
+	
+	width = w;
+	height = h;
 }
 
 Window::~Window() {
 	SDL_DestroyWindow(window);
-	SDL_DestroyRenderer(renderer);
+	// SDL_DestroyRenderer(renderer);
 }
 
 /*
@@ -74,12 +67,11 @@ SDL_Surface* Window::getSurface() {
 }
 
 /*
-Set the colour. When clear() is called, this is the colour that will be used, for example.
+Set the shade of grey. When clear() is called, this is the colour that will be used.
 */
-void Window::setColour(int r, int g, int b, int flags) {
-	SDL_SetRenderDrawColor(renderer, r, g, b, flags);
+void Window::setColour(uint8_t s) {
+	colour = s;
 }
-
 
 /*
 Hide window
@@ -102,5 +94,4 @@ Boolean parameter defines whether screen will be cleared before being redrawn.
 void Window::refresh(bool clear) {
 	if (clear) this->clear();
 	update();
-	present();
 }
