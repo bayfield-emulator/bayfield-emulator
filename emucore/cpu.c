@@ -106,14 +106,11 @@ static void fetch_current_instruction(bc_cpu_t *cpu) {
     cpu->instruction_param = param;
 }
 
-static void do_instruction(bc_cpu_t *cpu, int budget) {
+static void do_instruction(bc_cpu_t *cpu) {
     const insn_desc_t *t = cpu->current_instruction;
-    uint16_t param = cpu->instruction_param;
-    if (t->ncycles <= budget) {
-        cpu->regs.PC += t->param_count + 1;
-        // debug_log("Executing instruction: %x", t->opcode);
-        t->executor(cpu, t->opcode, 0, param);
-    }
+    cpu->regs.PC += t->param_count + 1;
+    // debug_log("Executing instruction: %x", t->opcode);
+    t->executor(cpu, t->opcode, 0, cpu->instruction_param);
 }
 
 void bc_cpu_step(bc_cpu_t *cpu, int clocks) {
@@ -161,7 +158,7 @@ void bc_cpu_step(bc_cpu_t *cpu, int clocks) {
             cpu->stall_counts_towards_budget = STALL_TYPE_FRONT;
             break;
         } else {
-            do_instruction(cpu, clocks);
+            do_instruction(cpu);
             bc_timer_add_cycles(cpu, cpu->current_instruction->ncycles);
             clocks -= cpu->current_instruction->ncycles;
         }
