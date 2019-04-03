@@ -117,6 +117,14 @@ void GPU::set_win_pos(uint8_t x, uint8_t y) {
 	GPU_REG_WINDOWY = y;
 }
 
+uint8_t *GPU::get_vram() {
+	return VRAM;
+}
+
+uint32_t *GPU::get_oam() {
+	return OAM;
+}
+
 //draw the sprites to a buffer
 void GPU::draw_sprites() {
 	memset(SPRITE_DELAY, 0x00, (sizeof(uint8_t) * 144)); //clear sprite delay array

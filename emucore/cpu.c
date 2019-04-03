@@ -23,7 +23,7 @@ static uint8_t cpu_user_set_irqs(bc_cpu_t *cpu, void *context, uint16_t addr, ui
 
 bc_cpu_t *bc_cpu_init(void) {
     bc_cpu_t *ret = malloc(sizeof(bc_cpu_t));
-    memset(&ret->regs, 0, sizeof(cpu_regs_t));
+    memset(ret, 0, sizeof(bc_cpu_t));
     bc_mmap_alloc(&ret->mem);
     ret->mem.cpu = ret;
 

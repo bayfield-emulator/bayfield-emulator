@@ -1,6 +1,6 @@
 #ifndef MBC_H
 #define MBC_H
-#include <stdint.h>
+#include "emucore.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,10 +29,14 @@ typedef struct mbc_context {
     int rtc_d;
     int rtc_latch;
     uint64_t rtc_epoch;
-    uint8_t *real_extram_base;
+    uint8_t *extram_base;
 } mbc_context_t;
 
 enum mbc_type bc_determine_mbc_type_from_header(uint8_t *romdata);
+void mbc1_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
+void mbc2_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
+void mbc3_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
+void mbc5_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
 
 #ifdef __cplusplus
 }

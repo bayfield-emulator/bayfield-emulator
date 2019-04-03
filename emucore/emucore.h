@@ -14,7 +14,7 @@ extern "C" {
 #define debug_assert(expr, msg) do { if (!(expr)) panic("debug_assert:%s, failing expr: %s in %s (%s:%d)", msg, #expr, __func__, __FILE__, __LINE__); } while(0)
 #define debug_log(s, ...) (fprintf(stderr, "(debug) in %s (%s:%d):" s "\n", __func__, __FILE__, __LINE__, ##__VA_ARGS__))
 #else
-#define debug_assert(expr) /**/
+#define debug_assert(expr, msg) /**/
 #define debug_log(s, ...) /**/
 #endif
 
@@ -32,6 +32,7 @@ typedef struct cart {
     size_t image_size;
     int mbc_type;
     uint8_t *rom;
+    uint8_t *extram_base;
     bc_mbc_write_proc_t mbc_handler;
     /* The only reason this exists is because MBC2 carts only have 4 bits available per RAM byte,
      * so we'll mask it on write. There is no read function, we do it directly out of extram. */
@@ -212,5 +213,9 @@ uint16_t bc_mmap_popstack16(cpu_mmap_t *mmap);
  * New: The context will also be passed to both callbacks. */
 void bc_mmap_add_mmio_observer(cpu_mmap_t *mmap, uint16_t addr,
     bc_mmio_observe_t write_proc, bc_mmio_fetch_t read_proc, void *context);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

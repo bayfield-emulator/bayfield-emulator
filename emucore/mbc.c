@@ -3,6 +3,8 @@
 
 enum mbc_type bc_determine_mbc_type_from_header(uint8_t *romdata) {
     switch(romdata[0x0147]) {
+    case 0x0:
+        return MBC_TYPE_JUST_RAM;
     case 0x01:
     case 0x02:
     case 0x03:
@@ -66,7 +68,7 @@ void mbc1_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
     if (addr < 0x6000) {
         mem->rom.mbc_context->multi_bits = write_val & 0x3;
         if (mem->rom.mbc_context->mode_sel == 1) {
-            mem->rom.extram = mem->rom.mbc_context->real_extram_base + (0x2000 * (write_val & 0x3));
+            mem->rom.extram = mem->rom.extram_base + (0x2000 * (write_val & 0x3));
         } else {
             int real_banknum = ((write_val & 0x3) << 5) | (mem->rom.mbc_context->rom_bank & 0x1f);
             mem->rom.mbc_context->rom_bank = real_banknum;
@@ -78,12 +80,12 @@ void mbc1_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
     if (addr < 0x8000) {
         mem->rom.mbc_context->mode_sel = write_val & 0x1;
         if (write_val & 1) {
-            mem->rom.extram = mem->rom.mbc_context->real_extram_base + (0x2000 * mem->rom.mbc_context->multi_bits);
+            mem->rom.extram = mem->rom.extram_base + (0x2000 * mem->rom.mbc_context->multi_bits);
             int real_banknum = mem->rom.mbc_context->rom_bank & 0x1f;
             mem->rom.mbc_context->rom_bank = real_banknum;
             mem->rom.bankx = mem->rom.rom + (0x4000 * real_banknum);
         } else {
-            mem->rom.extram = mem->rom.mbc_context->real_extram_base;
+            mem->rom.extram = mem->rom.extram_base;
             int real_banknum = ((mem->rom.mbc_context->multi_bits & 0x3) << 5) | (mem->rom.mbc_context->rom_bank & 0x1f);
             mem->rom.mbc_context->rom_bank = real_banknum;
             mem->rom.bankx = mem->rom.rom + (0x4000 * real_banknum);
@@ -128,7 +130,7 @@ void mbc3_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
     if (addr < 0x6000) {
         mem->rom.mbc_context->multi_bits = write_val & 0xf;
         if ((write_val & 0xf) < 0x07) {
-            mem->rom.extram = mem->rom.mbc_context->real_extram_base + (0x2000 * (write_val & 0xf));
+            mem->rom.extram = mem->rom.extram_base + (0x2000 * (write_val & 0xf));
         } else {
             panic("someone needs to implement RTC support here");
         }
@@ -160,7 +162,7 @@ void mbc5_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
 
     if (addr < 0x6000) {
         mem->rom.mbc_context->multi_bits = write_val & 0xf;
-        mem->rom.extram = mem->rom.mbc_context->real_extram_base + (0x2000 * (write_val & 0xf));
+        mem->rom.extram = mem->rom.extram_base + (0x2000 * (write_val & 0xf));
         return;
     }
 }

@@ -155,6 +155,9 @@ class GPU {
 
 		/* Simulate [clocks] cycles of the PPU*/
 		void render(uint32_t clocks);
+
+		uint8_t *get_vram();
+		uint32_t *get_oam();
 };
 
 #endif

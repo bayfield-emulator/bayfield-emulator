@@ -88,7 +88,7 @@ uint8_t bc_mmap_getvalue(cpu_mmap_t *mmap, uint16_t addr) {
 void bc_mmap_putvalue(cpu_mmap_t *mmap, uint16_t addr, uint8_t value) {
     if (addr >= 0xFF00 && addr <= 0xFF7F) {
         int slot = addr - 0xFF00;
-        if (!mmap->observers[slot].get) {
+        if (!mmap->observers[slot].set) {
             mmap->mmio_storage[slot] = value;
             // FIXME: should panic once all mmios implemented
             // debug_log("warning: write to unregistered MMIO register 0x%04x", slot);
