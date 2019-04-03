@@ -19,3 +19,6 @@ demo
 cputest
 *.a
 *.o
+
+# Hidden FUSE files
+.fuse_hidden*

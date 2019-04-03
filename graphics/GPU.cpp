@@ -17,7 +17,9 @@ void GPU::clear() {
 // constructor
 GPU::GPU() {
 	VRAM = (uint8_t *) malloc(sizeof(uint8_t) * 8 * KB);
-	// BG_BUFFER = (uint32_t *) malloc(sizeof(uint32_t) * 256 * 256); // IF YOU RE-ENABLE THIS... (SEE DESTRUCTOR)
+	BG_BUFFER = (uint32_t *) malloc(sizeof(uint32_t) * 256 * 256);
+	WINDOW_BUFFER = (uint32_t *) malloc(sizeof(uint32_t) * 256 * 256);
+	SPRITE_BUFFER = (uint32_t *) malloc(sizeof(uint32_t) * 256 * 256);
 	TILES_BG = VRAM;
 	TILES_SPRITES = VRAM + (2 * KB);
 	BG_MAP = VRAM + (6 * KB);
@@ -32,29 +34,15 @@ GPU::GPU() {
 // destructor
 GPU::~GPU() {
 	free(VRAM);
-	// free(BG_BUFFER); //... RE-ENABLE THIS TOO
+	free(BG_BUFFER); 
+	free(WINDOW_BUFFER); 
+	free(SPRITE_BUFFER); 
 	free(OAM);
 }
 
 //initialize the GPU with a pointer to Window->Surface->Pixels
 void GPU::init(uint32_t* ptr_to_win_memory) {
 	WINDOW_MEMORY = ptr_to_win_memory;
-}
-
-/* FOR DEBUGGING SO THAT SURFACES CAN BE DUMPED EASILY */
-void GPU::setBgBufferAddress(uint32_t* buf_addr) {
-	BG_BUFFER = buf_addr;
-	memset(BG_BUFFER, 0xFFFFFFFF, (sizeof(uint32_t) * 256 * 256));
-}
-
-void GPU::setSpriteBufferAddress(uint32_t* buf_addr) {
-	SPRITE_BUFFER = buf_addr;
-	memset(SPRITE_BUFFER, 0x00000000, (sizeof(uint32_t) * 256 * 256));
-}
-
-void GPU::setWindowBufferAddress(uint32_t* buf_addr) {
-	WINDOW_BUFFER = buf_addr;
-	memset(WINDOW_BUFFER, 0x00000000, (sizeof(uint32_t) * 256 * 256));
 }
 
 //remap the colours for the background
@@ -115,14 +103,6 @@ void GPU::set_scroll(int8_t x, int8_t y) {
 void GPU::set_win_pos(uint8_t x, uint8_t y) {
 	GPU_REG_WINDOWX = x;
 	GPU_REG_WINDOWY = y;
-}
-
-uint8_t *GPU::get_vram() {
-	return VRAM;
-}
-
-uint32_t *GPU::get_oam() {
-	return OAM;
 }
 
 //draw the sprites to a buffer
@@ -346,6 +326,14 @@ void GPU::render(uint32_t clocks) {
 			}
 		}
 	}
+}
+
+uint8_t *GPU::get_vram() {
+	return VRAM;
+}
+
+uint32_t *GPU::get_oam() {
+	return OAM;
 }
 
 /* TODO */

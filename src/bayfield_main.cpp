@@ -62,7 +62,7 @@ int main(int argc, char const *argv[]) {
     //While application is running
     while (!quit) {
         if (SDL_GetTicks() - vtime > 16) {
-            std::cout << "frame time!\n";
+            std::cout << "frame time!" << std::endl;
             // Take the one that isn't currently owned by GPU
             // FIXME we should use a mutex just in case
             SDL_Surface *front_buffer = cores.draw_buffers[cores.drawing_buffer? 0 : 1];
@@ -79,21 +79,13 @@ int main(int argc, char const *argv[]) {
             usleep(1000);
             continue;
         }
-            //User requests quit
-        if (e.type == SDL_QUIT) { //single window mode
-            quit = true;
-            cores.stop = 1;
-        }
-        else if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_CLOSE) { //multi-window mode
+
+        //User requests quit
+        if (e.type == SDL_QUIT) {
             quit = true;
             cores.stop = 1;
         }
 
-        if (e.type == SDL_MOUSEBUTTONDOWN) {
-                // queue->push_back(e);
-        } else if (e.type == SDL_MOUSEBUTTONUP) {
-                // queue->push_back(e);
-        }
     }
 
     cores.stop = 1;

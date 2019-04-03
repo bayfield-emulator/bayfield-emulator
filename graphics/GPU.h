@@ -109,11 +109,6 @@ class GPU {
 		/* Setup */
 		void init(uint32_t* ptr_to_win_memory);
 
-		/* DEBUGGING PURPOSES ONLY */
-		void setBgBufferAddress(uint32_t* buf_addr);
-		void setSpriteBufferAddress(uint32_t* buf_addr); //not done yet
-		void setWindowBufferAddress(uint32_t* buf_addr); //not done yet
-
 		/* Change the colours assigned to the 2-bit background values */
 		void remap_bg_colours(uint8_t map);
 
@@ -156,8 +151,11 @@ class GPU {
 		/* Simulate [clocks] cycles of the PPU*/
 		void render(uint32_t clocks);
 
-		uint8_t *get_vram();
-		uint32_t *get_oam();
+		/* Return VRAM */
+		uint8_t* get_vram();
+
+		/* Return OAM */
+		uint32_t* get_oam();
 };
 
 #endif
