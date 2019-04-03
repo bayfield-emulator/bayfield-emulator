@@ -22,8 +22,11 @@ Although the Game Boy CPU resembles the Intel 8080 and Zilog Z80, the Game Boyâ€
 The processor is an 8-bit CPU based off the 8080 and Z80 as mentioned above [x]. The processor is clocked at 4.194304 MHz. [Might merge with instructions]
 
 ##### Memory Map
+The system consists of two identical 8 KB banks of RAM, one for the main system and one as VRAM.
 
 ##### Video
+The graphical output is powered by an 8-bit PPU clocked at the same 4 MHz as the CPU. The PPU manages it's own memory, with any writes from the CPU needing to pass through the PPU first. The screen supports a 2-bit colour palette, making for "4 bad shades of green" as Michael Steil put it (33c3 talk link here?)
+The video system consists of three main concepts: background, window and sprites. The background is a set of 8 by 8 grids of pixels, tiled across the screen. The area tiles may be assigned to is larger then the actual display, allowing the unit to 'scroll' horizontally and vertically to give the illusion of a moving background. The window is similar to the background, even drawing it's pixel data from the same area of memory, but unlike the background, it is not affected by the PPU's scroll registers, and will remain stationary where positioned. This makes it ideal for small scoreboards along the right or bottom of the display. The final thing to draw is the sprites. These are very self-explanatory -- the blocks in Tetris, Mario, Donkey Kong -- all are sprites. These are the objects in the game that have to move independently of the background. They are drawn on top of the background (with a single exception) and are the only layer to support transparency. There may be up to 40 in use in a game at a time.
 
 ##### Timer
 
