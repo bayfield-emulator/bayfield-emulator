@@ -10,6 +10,11 @@ static bc_cpu_t *global_cpu;
 static char serial_port[41];
 static int serial_ptr = 0;
 
+#if SIMULATE_PIPELINE
+extern uint64_t n_instructions;
+extern uint64_t n_fetch_fails;
+#endif
+
 const char *convert_cpsr(int cpsr) {
     static char s[5] = {0};
     if (!s[0]) {
@@ -38,7 +43,7 @@ void dump_regs() {
         convert_cpsr(global_cpu->regs.CPSR));
 }
 
-uint8_t write_serial(bc_cpu_t *cpu, uint16_t addr, uint8_t write_val) {
+uint8_t write_serial(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t write_val) {
     static int did_first_header;
 
     if (write_val != 0x81) {
@@ -64,7 +69,7 @@ uint8_t write_serial(bc_cpu_t *cpu, uint16_t addr, uint8_t write_val) {
     return 0;
 }
 
-uint8_t write_serial_data(bc_cpu_t *cpu, uint16_t addr, uint8_t write_val) {
+uint8_t write_serial_data(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t write_val) {
     // printf("serial: %02x %c\n", write_val, write_val & 0x7f);
     // dump_regs();
     // getchar();
@@ -88,6 +93,9 @@ void panic(const char *fmt, ...) {
     fclose(f);
 
     printf("Dumped emucore's ram to emumem.dmp!\n");
+    #if SIMULATE_PIPELINE
+    printf("Instructions executed: %u \tmisfetched: %u\n", n_instructions, n_fetch_fails);
+    #endif
     exit(1);
 }
 
@@ -129,8 +137,8 @@ int main(int argc, char const *argv[]) {
     close(fd);
 
     bc_cpu_reset(global_cpu);
-    bc_mmap_add_mmio_observer(&global_cpu->mem, 0xFF01, write_serial_data, NULL);
-    bc_mmap_add_mmio_observer(&global_cpu->mem, 0xFF02, write_serial, NULL);
+    bc_mmap_add_mmio_observer(&global_cpu->mem, 0xFF01, write_serial_data, NULL, NULL);
+    bc_mmap_add_mmio_observer(&global_cpu->mem, 0xFF02, write_serial, NULL, NULL);
 
     int stepping = 0;
     uint16_t pc = global_cpu->regs.PC;

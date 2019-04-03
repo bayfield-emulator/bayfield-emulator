@@ -16,8 +16,9 @@ void bc_mmap_alloc(cpu_mmap_t *target) {
     target->hram = ram + WRAM_SIZE;
 }
 
-void bc_mmap_add_mmio_observer(cpu_mmap_t *mmap, uint16_t addr, bc_mmio_observe_t write_proc, bc_mmio_fetch_t read_proc) {
+void bc_mmap_add_mmio_observer(cpu_mmap_t *mmap, uint16_t addr, bc_mmio_observe_t write_proc, bc_mmio_fetch_t read_proc, void *context) {
     int slot = addr - 0xFF00;
+    mmap->observers[slot].ctx = context;
     mmap->observers[slot].get = read_proc? read_proc : DEFAULT_FETCHER;
     mmap->observers[slot].set = write_proc? write_proc : DEFAULT_OBSERVER;
 }
@@ -66,7 +67,7 @@ uint8_t bc_mmap_getvalue(cpu_mmap_t *mmap, uint16_t addr) {
         } else if (mmap->observers[slot].get == DEFAULT_FETCHER) {
             return mmap->mmio_storage[slot];
         } else {
-            return mmap->observers[slot].get(mmap->cpu, addr, mmap->mmio_storage[slot]);
+            return mmap->observers[slot].get(mmap->cpu, mmap->observers[slot].ctx, addr, mmap->mmio_storage[slot]);
         }
     }
 
@@ -94,7 +95,7 @@ void bc_mmap_putvalue(cpu_mmap_t *mmap, uint16_t addr, uint8_t value) {
         } else if (mmap->observers[slot].set == DEFAULT_OBSERVER) {
             mmap->mmio_storage[slot] = value;
         } else {
-            mmap->mmio_storage[slot] = mmap->observers[slot].set(mmap->cpu, addr, value);
+            mmap->mmio_storage[slot] = mmap->observers[slot].set(mmap->cpu, mmap->observers[slot].ctx, addr, value);
         }
         return;
     }
