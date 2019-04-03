@@ -273,14 +273,18 @@ void GPU::render(uint32_t clocks) {
 
 			if ((COMPLETED_CLOCKS + POSITION) > 65664) { //ENTER V-BLANK
 				GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_V_BLANK); //set v-blank mode
+				if (((COMPLETED_CLOCKS + POSITION) == 65665) && (GPU_REG_LCD_STATUS & INTR_V_BLANK));  /* TODO: V_BLANK INTERRUPT HERE */
 				COMPLETED_CLOCKS++;
 				if (!((COMPLETED_CLOCKS + POSITION) % 456)) GPU_REG_LCDCUR_Y++;
 				if (GPU_REG_LCDCUR_Y == 154) GPU_REG_LCDCUR_Y = 0;
 			}
 			else {
 				switch ((COMPLETED_CLOCKS + POSITION) % 456) {
-					case 0 ... 79: //OAM READ
+					case 0: //before OAM read, check for interrupt on this line
+						if ((GPU_REG_LCD_STATUS & INTR_LYC_EQ_LY) && (GPU_REG_LY_CMP == GPU_REG_LCDCUR_Y)); /* TODO: LY_CMP INTERRUPT HERE */
+					case 1 ... 79: //OAM READ
 						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_OAM_READ); //set OAM read mode
+						if (((COMPLETED_CLOCKS + POSITION) % 456) == 0 && (GPU_REG_LCD_STATUS & INTR_OAM));  /* TODO: OAM INTERRUPT HERE */
 						COMPLETED_CLOCKS++;
 						break;
 					case 80 ... 251: //PIXEL TRANSFER
@@ -315,7 +319,8 @@ void GPU::render(uint32_t clocks) {
 						COMPLETED_CLOCKS++;
 						break;
 					case 252 ... 454: //H-BLANK
-						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_H_BLANK);
+						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_H_BLANK); //set h-blank mode
+						if (((COMPLETED_CLOCKS + POSITION) % 456) == 252 && (GPU_REG_LCD_STATUS & INTR_H_BLANK));  /* TODO: H-BLANK INTERRUPT HERE */
 						COMPLETED_CLOCKS++;
 						break;
 					case 455: //LAST COLUMN OF H-BLANK
@@ -328,16 +333,36 @@ void GPU::render(uint32_t clocks) {
 	}
 }
 
-uint8_t *GPU::get_vram() {
+uint8_t* GPU::get_vram() {
 	return VRAM;
 }
 
-uint32_t *GPU::get_oam() {
+uint32_t* GPU::get_oam() {
 	return OAM;
+}
+
+uint8_t* GPU::get_lcdc() {
+	return &GPU_REG_LCD_CONTROL;
+}
+
+uint8_t* GPU::get_lcds() {
+	return &GPU_REG_LCD_STATUS;
+}
+
+void GPU::set_ly_cmp(uint8_t pos) {
+	GPU_REG_LY_CMP = pos;
+}
+
+void GPU::init_DMA(uint8_t* addr) {
+	/* 
+	TODO
+	This is used to tell the GPU to copy data from main memory.
+	The address is written into a register, and the GPU copies a block from that address into VRAM.
+	*/
 }
 
 /* TODO */
 // Sprite memory offset should be adjustable based on register setting
-// Interrupts
+// Add calls for interrupts
 // Check default register values
-// 
+// Check memory access permission?
