@@ -47,6 +47,8 @@ int main(int argc, char const *argv[]) {
     SDL_Surface *wind_buf = win->getSurface();
 
     SDL_Surface *frame = copy_frame();
+    // Adjust this if you want to put the screen somewhere else
+    SDL_Rect gameboy_screen_rect = (SDL_Rect){48, 28, 160, 144};
     if (frame) {
         SDL_BlitSurface(frame, NULL, wind_buf, NULL);
         SDL_FreeSurface(frame);
@@ -55,9 +57,23 @@ int main(int argc, char const *argv[]) {
     win->refresh(false);
     std::thread emulator_thread(emu_thread_go, &cores);
 
+    uint32_t vtime = 0;
     SDL_Event e;
     //While application is running
     while (!quit) {
+        if (SDL_GetTicks() - vtime > 16) {
+            std::cout << "frame time!\n";
+            // Take the one that isn't currently owned by GPU
+            // FIXME we should use a mutex just in case
+            SDL_Surface *front_buffer = cores.draw_buffers[cores.drawing_buffer? 0 : 1];
+            SDL_BlitSurface(front_buffer, NULL, wind_buf, &gameboy_screen_rect);
+            win->refresh(false);
+            vtime = SDL_GetTicks();
+
+            // Should be handled by GPU, this is just for testing
+            cores.drawing_buffer = (cores.drawing_buffer? 0 : 1);
+        }
+
         //Handle events on queue
         if (!SDL_PollEvent(&e)) {
             usleep(1000);
