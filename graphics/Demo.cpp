@@ -112,7 +112,6 @@ int main(int argc, char const *argv[]) {
 	SDL_Surface* win_buffer = SDL_CreateRGBSurface(0, 256, 256, 32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
 	main_gpu->setWindowBufferAddress((uint32_t *) win_buffer->pixels);
 
-	cout << "First, draw a background of diagonal stripes.\n\tSee bg_buffer.bmp to confirm." << endl;
 
 	//add background tiles to VRAM
 	main_gpu->add_bg_tile(0, whiteBlock);
@@ -130,7 +129,6 @@ int main(int argc, char const *argv[]) {
 	//draw background to buffer
 	main_gpu->draw_bg();
 
-	cout << "Next, draw a small checkerboard pattern with sprites near bottom right.\n\tSee spr_buffer.bmp to confirm." << endl;
 
 	//add sprite tiles to VRAM
 	main_gpu->add_sprite_tile(0, whiteBlock);
@@ -150,7 +148,6 @@ int main(int argc, char const *argv[]) {
 
 	main_gpu->draw_sprites();
 
-	cout << "Then create the window. It's all black with a single white block to help identify offset.\n\tSee win_buffer.bmp to confirm." << endl;
 
 	//draw sprites to buffer
 	main_gpu->set_win_pos(16, 16);
@@ -166,12 +163,16 @@ int main(int argc, char const *argv[]) {
 
 	main_gpu->draw_window();
 
-	cout << "Finally, combine all the layers into the correctly sized frame (160 x 144).\n\tSee raw_frame.bmp for final output and to confirm offsets are correct." << endl;
+	/* RENDER */
 
-	//copy buffer to window
-	//includes scroll register offsets for background
-	main_gpu->render();
-	win->refresh(false);
+	// main_gpu->render(70224);
+	// win->refresh(false);
+
+	// Draw screen very slowly for demo
+	for (int count = 0; count < 70224; count++) {
+		main_gpu->render(1);
+		win->refresh(false);
+	}
 
 	//dump Window contents
 	SDL_SaveBMP(win->getSurface(), "raw_frame.bmp");

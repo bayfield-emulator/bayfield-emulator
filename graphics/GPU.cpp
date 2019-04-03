@@ -119,6 +119,7 @@ void GPU::set_win_pos(uint8_t x, uint8_t y) {
 
 //draw the sprites to a buffer
 void GPU::draw_sprites() {
+	memset(SPRITE_DELAY, 0x00, (sizeof(uint8_t) * 144)); //clear sprite delay array
 	for (uint8_t oam_pos = 0; oam_pos < 40; oam_pos++) {
 
 		uint32_t* SPRT_DATA_ADDR = OAM + oam_pos;
@@ -143,7 +144,7 @@ void GPU::draw_sprites() {
 			for (int16_t y = 0; y < 8; y++)	{
 				if (((int16_t) spr_y) + y < 0 || spr_y + y > 144) continue; //skip lines off screen
 
-				SPRITE_DELAY[spr_y + y]++;
+				SPRITE_DELAY[spr_y + y] += 4;
 
 				for (int16_t x = 0; x < 8; x++) {
 					if (((int16_t) spr_x) + x < 0 || spr_x + x > 160) continue; //skip pixels off screen
@@ -259,61 +260,88 @@ void GPU::draw_bg() {
 }
 
 //assemble all buffers and produce final frame
-/*
-clocks: Number of cycles to simulate
-return: Number of cycles that were simulated
-*/
-uint16_t GPU::render(uint16_t clocks) {
-	if (!GPU_REG_LCD_CONTROL & ENABLE_LCD_DISPLAY) { //display 'turned off' so clear it and return
-		clear();
-		GPU_REG_LCDCUR_Y = 0;
-		return clocks;
-	}
-	for (uint8_t y = 0; y < 144; y++) {
+// clocks: Number of cycles to simulate
+void GPU::render(uint32_t clocks) {
 
-		//calculate vertical shift
-		uint8_t shifted_y = (y + GPU_REG_SCROLLY);
-		uint8_t win_y = (y - GPU_REG_WINDOWY);
+	uint32_t COMPLETED_CLOCKS = 0;
 
-		//update current row register
-		GPU_REG_LCDCUR_Y = y;
+	while (true) {
+		if (!GPU_REG_LCD_CONTROL & ENABLE_LCD_DISPLAY) { //display 'turned off' so clear it and return
+			clear();
+			GPU_REG_LCDCUR_Y = 0;
+			POSITION = 0;
+			return; //all cycles were completed (GPU idle)
+		}
+		while (GPU_REG_LCDCUR_Y < 154) {
 
-		for (uint8_t x = 0; x < 160; x++) {
+			uint8_t shifted_y = (GPU_REG_LCDCUR_Y + GPU_REG_SCROLLY);
+			uint8_t win_y = (GPU_REG_LCDCUR_Y - GPU_REG_WINDOWY);
 
-			// check if background and window are enabled
-			if (GPU_REG_LCD_CONTROL & ENABLE_BG_WIN_DISPLAY) {
+			if (COMPLETED_CLOCKS + 1 > clocks) { //if clocks is set to expire, save position and return
+				POSITION += COMPLETED_CLOCKS;
+				POSITION %= 70224;
+				return;
+			}
 
-				// calculate horizontal shift
-				uint8_t shifted_x = (x + GPU_REG_SCROLLX);
-				uint8_t win_x = (x - GPU_REG_WINDOWX - 7); //7 is a hard-coded value for reasons only Nintendo knows
+			if ((COMPLETED_CLOCKS + POSITION) > 65664) { //ENTER V-BLANK
+				GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_V_BLANK); //set v-blank mode
+				COMPLETED_CLOCKS++;
+				if (!((COMPLETED_CLOCKS + POSITION) % 456)) GPU_REG_LCDCUR_Y++;
+				if (GPU_REG_LCDCUR_Y == 154) GPU_REG_LCDCUR_Y = 0;
+			}
+			else {
+				switch ((COMPLETED_CLOCKS + POSITION) % 456) {
+					case 0 ... 79: //OAM READ
+						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_OAM_READ); //set OAM read mode
+						COMPLETED_CLOCKS++;
+						break;
+					case 80 ... 251: //PIXEL TRANSFER
+						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_PIXEL_TF); //set pixel transfer read mode
+						{ //don't worry about this bracket
 
-				// copy background buffer over
-				WINDOW_MEMORY[x + 160 * y] = BG_BUFFER[shifted_x + 256 * shifted_y];
+						//replacement x coordinate for old loop
+						uint8_t x = ((COMPLETED_CLOCKS + POSITION) % 456) - 80;
 
-				// copy window buffer over, if window draw enabled
-				if (GPU_REG_LCD_CONTROL & ENABLE_WINDOW) {
-					if (y >= GPU_REG_WINDOWY && x >= GPU_REG_WINDOWX) WINDOW_MEMORY[x + 160 * y] = WINDOW_BUFFER[win_x + 256 * win_y];
+						// check if background and window are enabled
+						if (GPU_REG_LCD_CONTROL & ENABLE_BG_WIN_DISPLAY) {
+
+							// calculate horizontal shift
+							uint8_t shifted_x = (x + GPU_REG_SCROLLX);
+							uint8_t win_x = (x - GPU_REG_WINDOWX - 7); //7 is a hard-coded value for reasons only Nintendo knows
+
+							// copy background buffer over
+							WINDOW_MEMORY[x + 160 * GPU_REG_LCDCUR_Y] = BG_BUFFER[shifted_x + 256 * shifted_y];
+
+							// copy window buffer over, if window draw enabled
+							if (GPU_REG_LCD_CONTROL & ENABLE_WINDOW) {
+								if (GPU_REG_LCDCUR_Y >= GPU_REG_WINDOWY && x >= GPU_REG_WINDOWX) WINDOW_MEMORY[x + 160 * GPU_REG_LCDCUR_Y] = WINDOW_BUFFER[win_x + 256 * win_y];
+							}
+						}
+
+						// copy sprite buffer over, if sprite draw enabled
+						if (GPU_REG_LCD_CONTROL & ENABLE_OBJ) {
+							// ignore transparent pixels
+							if (SPRITE_BUFFER[x + GPU_REG_LCDCUR_Y * 256] >> 24) WINDOW_MEMORY[x + GPU_REG_LCDCUR_Y * 160] = SPRITE_BUFFER[x + GPU_REG_LCDCUR_Y * 256];
+						}
+						} //don't worry about this bracket either
+						COMPLETED_CLOCKS++;
+						break;
+					case 252 ... 454: //H-BLANK
+						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_H_BLANK);
+						COMPLETED_CLOCKS++;
+						break;
+					case 455: //LAST COLUMN OF H-BLANK
+						GPU_REG_LCDCUR_Y++;
+						COMPLETED_CLOCKS++;
+						break;
 				}
 			}
-
-			// copy sprite buffer over, if sprite draw enabled
-			if (GPU_REG_LCD_CONTROL & ENABLE_OBJ) {
-				// ignore transparent pixels
-				if (SPRITE_BUFFER[x + y * 256] >> 24) WINDOW_MEMORY[x + y * 160] = SPRITE_BUFFER[x + y * 256];
-			}
 		}
-		/* H-BLANK */
-		if (GPU_REG_LCD_STATUS & INTR_H_BLANK); //if H-Blank interrupts were enabled, that would happen here
 	}
-	/* V-BLANK */
-	if (GPU_REG_LCD_STATUS & INTR_V_BLANK); //if V-Blank interrupts were enabled, that would happen here
-
-	return 0;
 }
 
 /* TODO */
 // Sprite memory offset should be adjustable based on register setting
 // Interrupts
-// Finish registers
-// Return from render() after each line, recover y pos from LCDCUR_Y each call
 // Check default register values
+// 

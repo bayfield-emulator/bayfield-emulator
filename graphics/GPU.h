@@ -13,10 +13,10 @@ NICK
 #define KB 					0x400
 #define SCREEN_OFF_COLOUR 	0xFFDEDEDE
 
-#define OAM_DELAY 		20
-#define TRANSFER_DELAY 	43
-#define H_BLANK_DELAY 	51
-#define V_BLANK_DELAY 	(10 * 114)
+#define OAM_DELAY 		80
+#define TRANSFER_DELAY 	172
+#define H_BLANK_DELAY 	204
+#define V_BLANK_DELAY 	4560
 
 /* LCDC BITS */
 #define ENABLE_LCD_DISPLAY 		0x80 // Display toggle
@@ -37,11 +37,17 @@ NICK
 
 /* LCD STATUS BITS */
 #define INTR_LYC_EQ_LY 	0x40 // LY_CMP register check toggle
-#define INTR_OAM		0x20 // GPU is in OAM read [MODE 2]
-#define INTR_V_BLANK	0x10 // GPU is in V-Blank [MODE 1]
-#define INTR_H_BLANK	0x08 // GPU is in H-Blank [MODE 0]
+#define INTR_OAM		0x20 // Interrupt when GPU is in OAM read [MODE 2]
+#define INTR_V_BLANK	0x10 // Interrupt when GPU is in V-Blank [MODE 1]
+#define INTR_H_BLANK	0x08 // Interrupt when GPU is in H-Blank [MODE 0]
 #define FLAG_LYC		0x04 // LYC compairison mode
 #define FLAG_MODE		0x03 // GPU mode [0 to 3]
+
+// MODES
+#define MODE_OAM_READ	0b10
+#define MODE_PIXEL_TF	0b11
+#define MODE_H_BLANK	0b00
+#define MODE_V_BLANK	0b01
 
 /* TODO:
 	ALL BITS
@@ -83,8 +89,9 @@ class GPU {
 		/* SDL_WINDOW RENDER DESTINATION */
 		uint32_t* WINDOW_MEMORY;
 
-		/* DELAY LIST */
+		/* TIMING LIST */
 		uint8_t SPRITE_DELAY[144];
+		uint32_t POSITION = 0;
 
 		/* FUNCTIONS */ 
 		void clear(); // Write value to display to 'turn it off'
@@ -147,7 +154,7 @@ class GPU {
 		void draw_bg();
 
 		/* Simulate [clocks] cycles of the PPU*/
-		uint16_t render(uint16_t clocks);
+		void render(uint32_t clocks);
 };
 
 #endif
