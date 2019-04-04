@@ -105,22 +105,6 @@ void GPU::set_win_pos(uint8_t x, uint8_t y) {
 	GPU_REG_WINDOWY = y;
 }
 
-void GPU::set_intr_LYC(void (* intr)()){
-	F_INTR_LYC = intr;
-}
-
-void GPU::set_intr_OAM(void (* intr)()){
-	F_INTR_OAM = intr;
-}
-
-void GPU::set_intr_H_BLANK(void (* intr)()){
-	F_INTR_HBL = intr;
-}
-
-void GPU::set_intr_V_BLANK(void (* intr)()){
-	F_INTR_VBL = intr;
-}
-
 //draw the sprites to a buffer
 void GPU::draw_sprites() {
 	memset(SPRITE_DELAY, 0x00, (sizeof(uint8_t) * 144)); //clear sprite delay array
@@ -368,25 +352,51 @@ uint32_t* GPU::get_oam() {
 	return OAM;
 }
 
-uint8_t* GPU::get_lcdc() {
-	return &GPU_REG_LCD_CONTROL;
+uint8_t GPU::get_FF(uint8_t reg_no) {
+	switch (reg_no) {
+		case 0x40:
+			return GPU_REG_LCD_CONTROL;
+		case 0x41:
+			return GPU_REG_LCD_STATUS;
+		case 0x42:
+			return GPU_REG_SCROLLY;
+		case 0x43:
+			return GPU_REG_SCROLLX;
+		case 0x44:
+			return GPU_REG_LCDCUR_Y;
+		case 0x45:
+			return GPU_REG_LY_CMP;
+		case 0x46:
+			return GPU_REG_DMA;
+		case 0x47:
+			return GPU_REG_PALETTE_BG;
+		case 0x48:
+			return GPU_REG_PALETTE_S0;
+		case 0x49:
+			return GPU_REG_PALETTE_S1;
+		case 0x4A:
+			return GPU_REG_WINDOWY;
+		case 0x4B:
+			return GPU_REG_WINDOWX;
+		default:
+			return 0xFF;
+	}
 }
 
-uint8_t* GPU::get_lcds() {
-	return &GPU_REG_LCD_STATUS;
+void GPU::set_intr_LYC(void (* intr)()){
+	F_INTR_LYC = intr;
 }
 
-void GPU::set_ly_cmp(uint8_t pos) {
-	GPU_REG_LY_CMP = pos;
+void GPU::set_intr_OAM(void (* intr)()){
+	F_INTR_OAM = intr;
 }
 
-void GPU::init_DMA(uint8_t* addr) {
-	/* 
-	TODO
-	This is used to tell the GPU to copy data from main memory.
-	The address is written into a register, and the GPU copies a block from that address into VRAM.
-	**Given that GPU will just return VRAM on request, main program should probably handle this.**
-	*/
+void GPU::set_intr_H_BLANK(void (* intr)()){
+	F_INTR_HBL = intr;
+}
+
+void GPU::set_intr_V_BLANK(void (* intr)()){
+	F_INTR_VBL = intr;
 }
 
 /* TODO */

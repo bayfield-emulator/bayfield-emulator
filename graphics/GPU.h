@@ -163,21 +163,8 @@ class GPU {
 		/* Return OAM */
 		uint32_t* get_oam();
 
-		/* Return LCD control register */
-		uint8_t* get_lcdc();
-
-		/* Return LCD status register */
-		/* 
-		WARNING: DO NOT WRITE TO BITS 0, 1 AND 2
-		THEY ARE READ ONLY. I'M TRUSTING YOU HERE.
-		*/
-		uint8_t* get_lcds();
-
-		/* Set y position for line interrupt */
-		void set_ly_cmp(uint8_t pos);
-
-		/* Send address for DMA memory transfer */
-		void init_DMA(uint8_t* addr);
+		/* Enable or disable interrupts */
+		uint8_t get_FF(uint8_t reg_no);
 
 		/* Set function to call when respective interrupt is triggered */
 		void set_intr_LYC(void (* intr)());
