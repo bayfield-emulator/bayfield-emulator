@@ -22,7 +22,20 @@ Although the Game Boy CPU resembles the Intel 8080 and Zilog Z80, the Game Boyâ€
 The processor is an 8-bit CPU based off the 8080 and Z80 as mentioned above [x]. The processor is clocked at 4.194304 MHz. [Might merge with instructions]
 
 ##### Memory Map
-The system consists of two identical 8 KB banks of RAM, one for the main system and one as VRAM.
+The system consists of two identical 8 KB banks of RAM, one for the main system and one as VRAM. See Fig. x for a general overview of the memory map.
+
+NOTE: Don't worry, all the images will be in the final doc
+[Image]
+
+Fig. x. [w] Game Boy memory map
+
+The Cartridge Header Area starting at 0100 is where the Game Boy begins execution. There is typically a jump to 0150, the real beginning of the game ROM [w]. The header contains various kinds data about the cartridge including a Nintendo logo, which is loaded onto the screen at startup. If this logo does not match up with that in internal ROM, the Game Boy halts execution [x].
+
+The next area is for cartridge ROM. In what is referred to as ROM bank 0 is 16Kb of fixed memory. After bank 0 is an area of switchable cartridge ROM memory. Game Boy cartridges may contain a Memory Bank Controller (MBC) which allow banks of ROM (and/or RAM) stored on the cartridge to be mapped into the memory space and thereby allowing for larger ROMs than with a fixed mapping [w]. There are several types of MBCs, and each type supports different ROM/RAM sizes, so our implementation needed to detect the MBC and emulate its operation [elaborate on details].
+
+Addresses 8000 - DFFF and FE00 - FE9F map onto general purpose and video memory. Areas of video memory are defined for tiles, described in the following section; background map; and OAM (Object Attribute Memory, i.e. sprite RAM). One curious area is the Echo RAM at address E000 - FE00. It holds a copy of internal (aka work) RAM [x]. The exact purpose of this area aside is not apparent, but most sources simply state it is not to be used [include sources].
+
+The higher address space is used for I/O registers and High RAM. The I/O registers include joypad, timer, interrupt flag registers, and other hardware control registers.
 
 ##### Video
 The graphical output is powered by an 8-bit PPU clocked at the same 4 MHz as the CPU. The PPU manages it's own memory, with any writes from the CPU needing to pass through the PPU first. The screen supports a 2-bit colour palette, making for "4 bad shades of green" as Michael Steil put it (33c3 talk link here?)
