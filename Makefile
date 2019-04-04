@@ -1,4 +1,4 @@
-BAYFIELDGB_SRC = src/bayfield_main.cpp src/emu_thread.cpp src/rom_utils.cpp
+BAYFIELDGB_SRC = src/bayfield_main.cpp src/emu_thread.cpp src/rom_utils.cpp src/clock.cpp
 STATIC_LIBS = graphics/libgfx.a emucore/libemucore.a
 LDFLAGS += -lSDL2
 CXXFLAGS += -std=c++11 -g -Wall -DDEBUG -fsanitize=address

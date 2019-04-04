@@ -9,6 +9,12 @@
 #include "Window.h"
 #include "bayfield.h"
 
+#define CPU_CLOCKS_PER_SEC 4194304
+#define TICKS_PER_SEC 128
+#define CYCS_PER_TICK (CPU_CLOCKS_PER_SEC / TICKS_PER_SEC)
+#define USEC_PER_SEC 1000000
+#define SLEEP_TIME (USEC_PER_SEC / TICKS_PER_SEC)
+
 bc_cpu_t *global_cpu;
 
 const char *convert_cpsr(int cpsr) {
@@ -55,13 +61,13 @@ void panic(const char *fmt, ...) {
 
 void init_cores(emu_shared_context_t *ctx) {
     SDL_Surface *check = NULL;
-    ctx->draw_buffers[0] = check = SDL_CreateRGBSurface(0, 160, 144, 24, 0xff, 0xff00, 0xff00000, 0);
+    ctx->draw_buffers[0] = check = SDL_CreateRGBSurface(0, 160, 144, 32, 0, 0, 0, 0);
     if (!check) {
-        debug_log("Failed to create draw buffer 0!");
+        debug_log("Failed to create draw buffer 0! reason: %s", SDL_GetError());
     }
-    ctx->draw_buffers[1] = check = SDL_CreateRGBSurface(0, 160, 144, 24, 0xff, 0xff00, 0xff00000, 0);
+    ctx->draw_buffers[1] = check = SDL_CreateRGBSurface(0, 160, 144, 32, 0, 0, 0, 0);
     if (!check) {
-        debug_log("Failed to create draw buffer 1!");
+        debug_log("Failed to create draw buffer 1! reason: %s", SDL_GetError());
     }
     ctx->drawing_buffer = 0;
 
@@ -71,12 +77,6 @@ void init_cores(emu_shared_context_t *ctx) {
 
     ctx->gpu = new GPU();
     ctx->gpu->init((uint32_t *)ctx->draw_buffers[0]->pixels);
-
-    // FIXME these are for debugging only?
-    uint32_t *gpu_buffers = (uint32_t *)calloc(256 * 256, 12);
-    ctx->gpu->setBgBufferAddress(gpu_buffers);
-    ctx->gpu->setSpriteBufferAddress(gpu_buffers + (256 * 256));
-    ctx->gpu->setWindowBufferAddress(gpu_buffers + (256 * 256 * 2));
 
     ctx->cpu = bc_cpu_init();
     ctx->cpu->mem.vram = ctx->gpu->get_vram();
@@ -91,13 +91,79 @@ void release_cores(emu_shared_context_t *ctx) {
     SDL_FreeSurface(ctx->draw_buffers[1]);
 }
 
+static void swap_buffers(emu_shared_context_t *ctx) {
+    int next_buf = (ctx->drawing_buffer + 1) % 2;
+    // FIXME there needs to be a proper API for this
+    ctx->gpu->init((uint32_t *)ctx->draw_buffers[next_buf]->pixels);
+    ctx->drawing_buffer = next_buf;
+}
+
 void emu_thread_go(emu_shared_context_t *ctx) {
     bc_cpu_reset(ctx->cpu);
     // only for panic
     global_cpu = ctx->cpu;
 
-    while (!ctx->stop) {
-        bc_cpu_step(ctx->cpu, 16);
-        ctx->gpu->render(16);
+    int frame_stat = 0;
+    int frame_counter_epoch = SDL_GetTicks();
+    int fps = 0;
+    int cps = 0;
+
+    uint32_t step_time;
+    uint32_t step_time2;
+
+    while (1) {
+        step_time = usec_since(0);
+
+        bc_cpu_step(ctx->cpu, CYCS_PER_TICK);
+        ctx->gpu->render(CYCS_PER_TICK);
+
+        if (ctx->stop) {
+            break;
+        }
+        
+        cps += CYCS_PER_TICK;
+        // usleep(SLEEP_TIME - 500); 
+
+        if (SDL_GetTicks() - frame_counter_epoch >= 1000) {
+            frame_counter_epoch = SDL_GetTicks();
+            printf("\t\t\t\t\tFPS: %d\n", fps);
+            printf("\t\t\t\t\tCycs ran: %d\n", cps);
+            fps = 0;
+            cps = 0;
+        }
+
+        if (!frame_stat && (*ctx->gpu->get_lcds() & 0x3) == 1) {
+            // GPU in vblank
+            // printf("GPU entered vblank!\n");
+            ctx->gpu->draw_bg();
+            ctx->gpu->draw_window();
+            ctx->gpu->draw_sprites();
+            swap_buffers(ctx);
+            fps++;
+            frame_stat = 1;
+        } else if (frame_stat && (*ctx->gpu->get_lcds() & 0x3) != 1) {
+            frame_stat = 0;
+        }
+
+        step_time2 = usec_since(step_time);
+
+        // All the code below is for making sure we run exactly at 4mhz.
+        int nsteps_left = (1 - ((float)cps / CPU_CLOCKS_PER_SEC)) * TICKS_PER_SEC;
+        int time_left = (1000 - (SDL_GetTicks() - frame_counter_epoch)) * 1000;
+        // Get time we'll spend sleeping for the rest of this sec,
+        // over the number of sleeps we have left
+        int sleep_time;
+        if (step_time2 * nsteps_left >= time_left) {
+            printf("Warning: over budget! %d > %d\n", step_time2 * nsteps_left, time_left);
+            sleep_time = 0;
+        } else if (nsteps_left == 0) {
+            // Nothing left to do so sleep until the next second
+            sleep_time = time_left;
+        } else {
+            sleep_time = (time_left - (step_time2 * nsteps_left)) / nsteps_left;
+        }
+        // printf("Step time: %d        Steps left: %d      Sleep time: %d       usec left: %d\n",
+        //     step_time2, nsteps_left, sleep_time, time_left);
+        usleep(sleep_time); 
     }
 }
