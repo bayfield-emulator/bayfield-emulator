@@ -367,7 +367,7 @@ uint8_t GPU::get_FF(uint8_t reg_no) {
 		case 0x45:
 			return GPU_REG_LY_CMP;
 		case 0x46:
-			return GPU_REG_DMA;
+			return GPU_REG_DMA; //should not contain anything, not implemented
 		case 0x47:
 			return GPU_REG_PALETTE_BG;
 		case 0x48:
@@ -380,6 +380,49 @@ uint8_t GPU::get_FF(uint8_t reg_no) {
 			return GPU_REG_WINDOWX;
 		default:
 			return 0xFF;
+	}
+}
+
+void GPU::set_FF(uint8_t reg_no, uint8_t value) {
+	switch (reg_no) {
+		case 0x40:
+			GPU_REG_LCD_CONTROL = value;
+			return;
+		case 0x41:
+			GPU_REG_LCD_STATUS = value & 0x78; //all read, partial write
+			return;
+		case 0x42:
+			GPU_REG_SCROLLY = value;
+			return;
+		case 0x43:
+			GPU_REG_SCROLLX = value;
+			return;
+		case 0x44:
+			GPU_REG_LCDCUR_Y = 0x00; /* Read only. "Writing will reset the counter." - Pandocs */
+			return;
+		case 0x45:
+			GPU_REG_LY_CMP = value;
+			return;
+		case 0x46:
+			GPU_REG_DMA = value;
+			return;
+		case 0x47:
+			GPU_REG_PALETTE_BG = value;
+			return;
+		case 0x48:
+			GPU_REG_PALETTE_S0 = value;
+			return;
+		case 0x49:
+			GPU_REG_PALETTE_S1 = value;
+			return;
+		case 0x4A:
+			GPU_REG_WINDOWY = value;
+			return;
+		case 0x4B:
+			GPU_REG_WINDOWX = value;
+			return;
+		default:
+			return;
 	}
 }
 

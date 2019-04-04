@@ -163,8 +163,11 @@ class GPU {
 		/* Return OAM */
 		uint32_t* get_oam();
 
-		/* Enable or disable interrupts */
+		/* Get registers */
 		uint8_t get_FF(uint8_t reg_no);
+
+		/* Set bits in registers, where permitted */
+		void set_FF(uint8_t reg_no, uint8_t value);
 
 		/* Set function to call when respective interrupt is triggered */
 		void set_intr_LYC(void (* intr)());
