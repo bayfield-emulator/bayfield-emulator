@@ -3,12 +3,14 @@
 
 #include <SDL2/SDL.h>
 #include "emucore.h"
+#include "joypad.h"
 #include "GPU.h"
 
 typedef struct {
     char rom_title[16];
     bc_cpu_t *cpu;
     GPU *gpu;
+    joyp_t joypad;
     // Ideally, the GPU will tell us when it finishes a frame,
     // and we'll change the buffer in use so the main thread can always pull
     // a fully rendered image.

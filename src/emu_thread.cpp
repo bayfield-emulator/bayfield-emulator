@@ -81,6 +81,8 @@ void init_cores(emu_shared_context_t *ctx) {
     ctx->cpu = bc_cpu_init();
     ctx->cpu->mem.vram = ctx->gpu->get_vram();
     ctx->cpu->mem.oam = (uint8_t *)ctx->gpu->get_oam();
+
+    joyp_init(&ctx->cpu->mem, &ctx->joypad);
 }
 
 void release_cores(emu_shared_context_t *ctx) {
@@ -132,7 +134,7 @@ void emu_thread_go(emu_shared_context_t *ctx) {
             cps = 0;
         }
 
-        if (!frame_stat && (*ctx->gpu->get_lcds() & 0x3) == 1) {
+        if (!frame_stat && (ctx->gpu->get_FF(0x41) & 0x3) == 1) {
             // GPU in vblank
             // printf("GPU entered vblank!\n");
             ctx->gpu->draw_bg();
@@ -141,7 +143,7 @@ void emu_thread_go(emu_shared_context_t *ctx) {
             swap_buffers(ctx);
             fps++;
             frame_stat = 1;
-        } else if (frame_stat && (*ctx->gpu->get_lcds() & 0x3) != 1) {
+        } else if (frame_stat && (ctx->gpu->get_FF(0x41) & 0x3) != 1) {
             frame_stat = 0;
         }
 

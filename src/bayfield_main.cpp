@@ -10,6 +10,7 @@
 #include "GPU.h"
 #include "Window.h"
 #include "bayfield.h"
+#include "joypad.h"
 
 SDL_Surface *copy_frame(void) {
     SDL_Surface *ret = SDL_LoadBMP("eframe.bmp");
@@ -78,11 +79,18 @@ int main(int argc, char const *argv[]) {
         }
 
         //User requests quit
-        if (e.type == SDL_QUIT) {
+        switch(e.type) {
+        case SDL_KEYDOWN:
+        case SDL_KEYUP:
+            joyp_poll(cores.cpu, &cores.joypad, &e);
+            break;
+        case SDL_QUIT:
             quit = true;
             cores.stop = 1;
+            break;
+        default:
+            break;
         }
-
     }
 
     cores.stop = 1;
