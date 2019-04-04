@@ -40,7 +40,7 @@ NICK
 #define INTR_OAM		0x20 // Interrupt when GPU is in OAM read [MODE 2]
 #define INTR_V_BLANK	0x10 // Interrupt when GPU is in V-Blank [MODE 1]
 #define INTR_H_BLANK	0x08 // Interrupt when GPU is in H-Blank [MODE 0]
-#define FLAG_LYC		0x04 // LYC compairison mode
+#define FLAG_LYC		0x04 // LYC comparison mode
 #define FLAG_MODE		0x03 // GPU mode [0 to 3]
 
 // MODES
@@ -93,6 +93,12 @@ class GPU {
 		uint8_t SPRITE_DELAY[144];
 		uint32_t POSITION = 0;
 
+		/* POINTER TO INTERRUPT ROUTINES */
+		void (*F_INTR_LYC)(void);
+		void (*F_INTR_OAM)(void);
+		void (*F_INTR_HBL)(void);
+		void (*F_INTR_VBL)(void);
+
 		/* FUNCTIONS */ 
 		void clear(); // Write value to display to 'turn it off'
 
@@ -100,7 +106,7 @@ class GPU {
 
 	public:
 
-		/* Contructor */
+		/* Constructor */
 		GPU();
 
 		/* Destructor */
@@ -145,7 +151,7 @@ class GPU {
 		/* Render window to buffer */
 		void draw_window(); //not done yet		
 
-		/* Render backgroud tiles to buffer */
+		/* Render background tiles to buffer */
 		void draw_bg();
 
 		/* Simulate [clocks] cycles of the PPU*/
@@ -172,6 +178,12 @@ class GPU {
 
 		/* Send address for DMA memory transfer */
 		void init_DMA(uint8_t* addr);
+
+		/* Set function to call when respective interrupt is triggered */
+		void set_intr_LYC(void (* intr)());
+		void set_intr_OAM(void (* intr)());
+		void set_intr_H_BLANK(void (* intr)());
+		void set_intr_V_BLANK(void (* intr)());
 };
 
 #endif

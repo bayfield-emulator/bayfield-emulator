@@ -83,12 +83,12 @@ void GPU::set_sprite_data(uint8_t pos, uint8_t x, uint8_t y, uint8_t id, uint8_t
 	*oam_pos = (x << 24) + (y << 16) + (id << 8) + misc;
 }
 
-//set an area in backgroud to render as tile [id] from backgroud/shared VRAM
+//set an area in background to render as tile [id] from background/shared VRAM
 void GPU::set_bg_tile(int x, int y, int id) {
 	BG_MAP[x + y * 32] = id;
 }
 
-//set an area in window to render as tile [id] from backgroud/shared VRAM
+//set an area in window to render as tile [id] from background/shared VRAM
 void GPU::set_window_tile(int x, int y, int id) {
 	WINDOW_MAP[x + y * 32] = id;
 }
@@ -103,6 +103,22 @@ void GPU::set_scroll(int8_t x, int8_t y) {
 void GPU::set_win_pos(uint8_t x, uint8_t y) {
 	GPU_REG_WINDOWX = x;
 	GPU_REG_WINDOWY = y;
+}
+
+void GPU::set_intr_LYC(void (* intr)()){
+	F_INTR_LYC = intr;
+}
+
+void GPU::set_intr_OAM(void (* intr)()){
+	F_INTR_OAM = intr;
+}
+
+void GPU::set_intr_H_BLANK(void (* intr)()){
+	F_INTR_HBL = intr;
+}
+
+void GPU::set_intr_V_BLANK(void (* intr)()){
+	F_INTR_VBL = intr;
 }
 
 //draw the sprites to a buffer
@@ -273,7 +289,9 @@ void GPU::render(uint32_t clocks) {
 
 			if ((COMPLETED_CLOCKS + POSITION) > 65664) { //ENTER V-BLANK
 				GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_V_BLANK); //set v-blank mode
-				if (((COMPLETED_CLOCKS + POSITION) == 65665) && (GPU_REG_LCD_STATUS & INTR_V_BLANK));  /* TODO: V_BLANK INTERRUPT HERE */
+				if (((COMPLETED_CLOCKS + POSITION) == 65665) && (GPU_REG_LCD_STATUS & INTR_V_BLANK)) {
+					if (F_INTR_VBL != NULL) F_INTR_VBL();  /* V_BLANK INTERRUPT */
+				}
 				COMPLETED_CLOCKS++;
 				if (!((COMPLETED_CLOCKS + POSITION) % 456)) GPU_REG_LCDCUR_Y++;
 				if (GPU_REG_LCDCUR_Y == 154) GPU_REG_LCDCUR_Y = 0;
@@ -281,10 +299,14 @@ void GPU::render(uint32_t clocks) {
 			else {
 				switch ((COMPLETED_CLOCKS + POSITION) % 456) {
 					case 0: //before OAM read, check for interrupt on this line
-						if ((GPU_REG_LCD_STATUS & INTR_LYC_EQ_LY) && (GPU_REG_LY_CMP == GPU_REG_LCDCUR_Y)); /* TODO: LY_CMP INTERRUPT HERE */
+						if ((GPU_REG_LCD_STATUS & INTR_LYC_EQ_LY) && (GPU_REG_LY_CMP == GPU_REG_LCDCUR_Y)) {
+							if (F_INTR_LYC != NULL) F_INTR_LYC(); /* LY_CMP INTERRUPT */
+						}
 					case 1 ... 79: //OAM READ
 						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_OAM_READ); //set OAM read mode
-						if (((COMPLETED_CLOCKS + POSITION) % 456) == 0 && (GPU_REG_LCD_STATUS & INTR_OAM));  /* TODO: OAM INTERRUPT HERE */
+						if (((COMPLETED_CLOCKS + POSITION) % 456) == 0 && (GPU_REG_LCD_STATUS & INTR_OAM)) {
+							if (F_INTR_OAM != NULL) F_INTR_OAM();  /* OAM INTERRUPT */
+						}
 						COMPLETED_CLOCKS++;
 						break;
 					case 80 ... 239: //PIXEL TRANSFER
@@ -318,12 +340,14 @@ void GPU::render(uint32_t clocks) {
 						} //don't worry about this bracket either
 						COMPLETED_CLOCKS++;
 						break;
-					case 240 ... 251: //wasted pixel tranfer clocks (emulation doesn't need them but real unit does)
+					case 240 ... 251: //wasted pixel transfer clocks (emulation doesn't need them but real unit does)
 						COMPLETED_CLOCKS++;
 						break; 
 					case 252 ... 454: //H-BLANK
 						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_H_BLANK); //set h-blank mode
-						if (((COMPLETED_CLOCKS + POSITION) % 456) == 252 && (GPU_REG_LCD_STATUS & INTR_H_BLANK));  /* TODO: H-BLANK INTERRUPT HERE */
+						if (((COMPLETED_CLOCKS + POSITION) % 456) == 252 && (GPU_REG_LCD_STATUS & INTR_H_BLANK)) {
+							if (F_INTR_HBL != NULL) F_INTR_HBL();  /* H-BLANK INTERRUPT */
+						}
 						COMPLETED_CLOCKS++;
 						break;
 					case 455: //LAST COLUMN OF H-BLANK
@@ -361,11 +385,10 @@ void GPU::init_DMA(uint8_t* addr) {
 	TODO
 	This is used to tell the GPU to copy data from main memory.
 	The address is written into a register, and the GPU copies a block from that address into VRAM.
+	**Given that GPU will just return VRAM on request, main program should probably handle this.**
 	*/
 }
 
 /* TODO */
 // Sprite memory offset should be adjustable based on register setting
-// Add calls for interrupts
-// Check default register values
-// Check memory access permission?
+// Check default register values -> this would normally be set by the system before a program begins
