@@ -287,7 +287,7 @@ void GPU::render(uint32_t clocks) {
 						if (((COMPLETED_CLOCKS + POSITION) % 456) == 0 && (GPU_REG_LCD_STATUS & INTR_OAM));  /* TODO: OAM INTERRUPT HERE */
 						COMPLETED_CLOCKS++;
 						break;
-					case 80 ... 251: //PIXEL TRANSFER
+					case 80 ... 239: //PIXEL TRANSFER
 						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_PIXEL_TF); //set pixel transfer read mode
 						{ //don't worry about this bracket
 
@@ -318,6 +318,9 @@ void GPU::render(uint32_t clocks) {
 						} //don't worry about this bracket either
 						COMPLETED_CLOCKS++;
 						break;
+					case 240 ... 251: //wasted pixel tranfer clocks (emulation doesn't need them but real unit does)
+						COMPLETED_CLOCKS++;
+						break; 
 					case 252 ... 454: //H-BLANK
 						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_H_BLANK); //set h-blank mode
 						if (((COMPLETED_CLOCKS + POSITION) % 456) == 252 && (GPU_REG_LCD_STATUS & INTR_H_BLANK));  /* TODO: H-BLANK INTERRUPT HERE */
