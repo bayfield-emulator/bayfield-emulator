@@ -638,7 +638,7 @@ static void IMP_jump_rel(bc_cpu_t *cpu, int opcode, int cycle, int param) {
 
         if (go == -2) {
             // FIXME: remove this once done debugging!
-            panic("infinite loop");
+            // panic("infinite loop");
         }
         // getchar();
     }
