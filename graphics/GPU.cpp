@@ -169,12 +169,24 @@ void GPU::draw_window() {
 		for (int tile_map_x = 0; tile_map_x < 32; tile_map_x++) {
 
 			// this value in the map indicated it would be this tile (if it exists)
-			uint8_t tile_id = WINDOW_MAP[tile_map_x + tile_map_y * 32];
+			uint8_t *base;
+			if (GPU_REG_LCD_CONTROL & SELECT_WINDOW_MAP) {
+				base = BG_MAP;
+			} else {
+				base = WINDOW_MAP; 
+			}
+			uint8_t tile_id = base[tile_map_x + tile_map_y * 32];
 
 			// not a tile (memset in constructor guarantees this)
 			if (tile_id == 0xFF) continue;
 
-			uint16_t* TILE_ADDR = (uint16_t *) TILES_BG + tile_id * 8;
+			uint16_t* TILE_ADDR;
+			if (GPU_REG_LCD_CONTROL & SELECT_BG_WIN_TILE) {
+				TILE_ADDR = (uint16_t *) TILES_BG + tile_id * 8;
+			} else {
+				int8_t *signed_tile_id = (int8_t *)&tile_id;
+				TILE_ADDR = (uint16_t *) (TILES_BG + 0x1000) + (*signed_tile_id) * 8;
+			}
 
 			// copy [tile -> buffer] loops
 			for (int y = 0; y < 8; y++)	{
@@ -210,12 +222,24 @@ void GPU::draw_bg() {
 		for (int tile_map_x = 0; tile_map_x < 32; tile_map_x++) {
 
 			// this value in the map indicated it would be this tile (if it exists)
-			uint8_t tile_id = BG_MAP[tile_map_x + tile_map_y * 32];
+			uint8_t *base;
+			if (GPU_REG_LCD_CONTROL & SELECT_BG_MAP) {
+				base = WINDOW_MAP;
+			} else {
+				base = BG_MAP; 
+			}
+			uint8_t tile_id = base[tile_map_x + tile_map_y * 32];
 
 			// not a tile (memset in constructor guarantees this)
 			if (tile_id == 0xFF) continue;
 
-			uint16_t* TILE_ADDR = (uint16_t *) TILES_BG + tile_id * 8;
+			uint16_t* TILE_ADDR;
+			if (GPU_REG_LCD_CONTROL & SELECT_BG_WIN_TILE) {
+				TILE_ADDR = (uint16_t *) TILES_BG + tile_id * 8;
+			} else {
+				int8_t *signed_tile_id = (int8_t *)&tile_id;
+				TILE_ADDR = (uint16_t *) (TILES_BG + 0x1000) + (*signed_tile_id) * 8;
+			}
 
 			// copy [tile -> buffer] loops
 			for (int y = 0; y < 8; y++)	{
