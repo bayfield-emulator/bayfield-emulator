@@ -18,9 +18,10 @@ void bc_timer_add_cycles(bc_cpu_t *cpu, int nclocks) {
 
     // ticks_passed will rarely be more than 1
     uint32_t ticks_passed = budget / 16;
-    if (cpu->div_clock + ticks_passed >= 16) {
-        cpu->div += (ticks_passed / 16);
-        cpu->div_clock = 16 - ticks_passed;
+    cpu->div_clock += ticks_passed;
+    if (cpu->div_clock >= 16) {
+        cpu->div += cpu->div_clock / 16;
+        cpu->div_clock = cpu->div_clock % 16;
     }
 
     if (!cpu->timer_enable) {
