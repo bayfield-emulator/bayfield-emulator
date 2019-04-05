@@ -36,7 +36,7 @@ uint8_t *bc_mmap_calc(cpu_mmap_t *mem, uint16_t addr) {
     }
     if (addr < 0xC000) {
         // cart ram
-        panic("should have called extram handler for this: %x", addr);
+        return mem->rom.extram + (addr - 0xA000);
     }
     if (addr < 0xE000) {
         // work ram
@@ -78,7 +78,7 @@ uint8_t bc_mmap_getvalue(cpu_mmap_t *mmap, uint16_t addr) {
         return mmap->cpu->irq_mask & (~IF_MASTER);
     }
 
-    if (addr >= 0xFEA0 && addr <= 0xFEFF) {
+    if ((addr >= 0xFEA0 && addr <= 0xFEFF) || (mmap->cpu->dma_lockdown_time && addr < 0xFF80)) {
         debug_log("Program trying to read from unusable region");
         return 0xAA;
     }
@@ -100,9 +100,14 @@ void bc_mmap_putvalue(cpu_mmap_t *mmap, uint16_t addr, uint8_t value) {
         return;
     }
 
+    if (mmap->cpu->dma_lockdown_time && addr < 0xFF80) {
+        return;
+    }
+
     if (addr >= 0xA000 && addr <= 0xBFFF) {
         debug_assert(mmap->rom.extram_handler, "writing to extram but there was no handler registered");
         mmap->rom.extram_handler(mmap, addr, value);
+        return;
     }
 
     /* Make sure to save the master flag */
@@ -134,7 +139,7 @@ void bc_mmap_putvalue16(cpu_mmap_t *mmap, uint16_t addr, uint16_t value) {
         panic("using put16 on MBC");
     }
 
-    if (addr >= 0xFEA0 && addr <= 0xFEFF) {
+    if ((addr >= 0xFEA0 && addr <= 0xFEFF) || (mmap->cpu->dma_lockdown_time && addr < 0xFF80)) {
         return;
     }
 

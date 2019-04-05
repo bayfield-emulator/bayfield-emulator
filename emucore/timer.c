@@ -7,6 +7,15 @@ void bc_timer_add_cycles(bc_cpu_t *cpu, int nclocks) {
     cpu->clock_leftover = budget % 16;
     // debug_log("adding %d cycles to clock, %d used, %d leftover", nclocks, budget, cpu->clock_leftover);
 
+    if (nclocks >= cpu->dma_lockdown_time) {
+        if (cpu->dma_lockdown_time) {
+            debug_log("DMA ended!");
+        }
+        cpu->dma_lockdown_time = 0;
+    } else {
+        cpu->dma_lockdown_time -= nclocks;
+    }
+
     // ticks_passed will rarely be more than 1
     uint32_t ticks_passed = budget / 16;
     if (cpu->div_clock + ticks_passed >= 16) {

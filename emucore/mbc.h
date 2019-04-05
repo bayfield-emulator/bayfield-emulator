@@ -39,6 +39,9 @@ void mbc2_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
 void mbc3_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
 void mbc5_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
 
+void normal_extram_write(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
+void stupid_extram_write(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
+
 #ifdef __cplusplus
 }
 #endif

@@ -18,8 +18,6 @@ uint8_t cpu_user_get_tima(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t s
 uint8_t cpu_user_set_tima(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t write_val);
 uint8_t cpu_user_set_tac(bc_cpu_t *cpu, void *context, uint16_t addr, uint8_t write_val);
 
-uint8_t *bc_mmap_calc(cpu_mmap_t *mem, uint16_t addr);
-
 #define STALL_TYPE_FRONT 0xFFFFFFFF
 #define STALL_TYPE_BACK 0x0
 static inline void bc_cpu_stall(bc_cpu_t *cpu, int ncycles, uint32_t type) {

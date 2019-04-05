@@ -102,6 +102,8 @@ typedef struct lr35902 {
      * These stalls DO NOT add their time back to the budget, since it was spent doing 
      * "real work". */
     uint32_t stall_counts_towards_budget;
+    /* If non-zero, only HRAM is accessible. Decremented automatically every clock. */
+    uint32_t dma_lockdown_time;
 
     /* Clock source for both timer and divider regs.
      * It ticks once every 16 cycles. */
@@ -198,6 +200,9 @@ static inline int8_t bc_convertunsignedvalue(uint8_t val) {
 
 void bc_mmap_alloc(cpu_mmap_t *target);
 void bc_mmap_release(cpu_mmap_t *target);
+
+/* Convert a CPU address to a C address. */
+uint8_t *bc_mmap_calc(cpu_mmap_t *mem, uint16_t addr);
 
 /* Read/write memory. This is done in the context of CPU code, so MMIO observers will be called. */
 uint8_t bc_mmap_getvalue(cpu_mmap_t *mmap, uint16_t addr);

@@ -79,6 +79,27 @@ static uint8_t gpu_mmio_read_trampoline(bc_cpu_t *cpu, emu_shared_context_t *ctx
     return ctx->gpu->get_FF(addr & 0xFF);
 }
 
+static uint8_t do_dma_request(bc_cpu_t *cpu, emu_shared_context_t *ctx, uint16_t addr, uint8_t reg_val) {
+    if (reg_val >= 0xF1) {
+        debug_log("Dropping invalid DMA request: %x", reg_val);
+        return 0;
+    }
+
+    debug_log("DMA request from user region %x00-%x9F", reg_val, reg_val);
+
+    if (reg_val >= 0xA0 && reg_val <= 0xBF) {
+        if (((reg_val << 8) | 0x9F) - 0xA000 < cpu->mem.rom.extram_usable_size) {
+            debug_log("Dropping out-of-bounds extram DMA request: %x", reg_val);
+            return 0;
+        }
+    }
+
+    cpu->dma_lockdown_time = 640;
+    // ctx->gpu->set_dma_lockdown(640);
+    memcpy(ctx->gpu->get_oam(), bc_mmap_calc(&cpu->mem, reg_val << 8), 0xA0);
+    return reg_val;
+}
+
 void init_cores(emu_shared_context_t *ctx) {
     SDL_Surface *check = NULL;
     ctx->draw_buffers[0] = check = SDL_CreateRGBSurface(0, 160, 144, 32, 0, 0, 0, 0);
@@ -110,12 +131,13 @@ void init_cores(emu_shared_context_t *ctx) {
     bc_mmap_add_mmio_observer(&ctx->cpu->mem, 0xFF43, (bc_mmio_observe_t)gpu_mmio_write_trampoline, (bc_mmio_fetch_t)gpu_mmio_read_trampoline, ctx);
     bc_mmap_add_mmio_observer(&ctx->cpu->mem, 0xFF44, (bc_mmio_observe_t)gpu_mmio_write_trampoline, (bc_mmio_fetch_t)gpu_mmio_read_trampoline, ctx);
     bc_mmap_add_mmio_observer(&ctx->cpu->mem, 0xFF45, (bc_mmio_observe_t)gpu_mmio_write_trampoline, (bc_mmio_fetch_t)gpu_mmio_read_trampoline, ctx);
-    bc_mmap_add_mmio_observer(&ctx->cpu->mem, 0xFF46, (bc_mmio_observe_t)gpu_mmio_write_trampoline, (bc_mmio_fetch_t)gpu_mmio_read_trampoline, ctx);
     bc_mmap_add_mmio_observer(&ctx->cpu->mem, 0xFF47, (bc_mmio_observe_t)gpu_mmio_write_trampoline, (bc_mmio_fetch_t)gpu_mmio_read_trampoline, ctx);
     bc_mmap_add_mmio_observer(&ctx->cpu->mem, 0xFF48, (bc_mmio_observe_t)gpu_mmio_write_trampoline, (bc_mmio_fetch_t)gpu_mmio_read_trampoline, ctx);
     bc_mmap_add_mmio_observer(&ctx->cpu->mem, 0xFF49, (bc_mmio_observe_t)gpu_mmio_write_trampoline, (bc_mmio_fetch_t)gpu_mmio_read_trampoline, ctx);
     bc_mmap_add_mmio_observer(&ctx->cpu->mem, 0xFF4A, (bc_mmio_observe_t)gpu_mmio_write_trampoline, (bc_mmio_fetch_t)gpu_mmio_read_trampoline, ctx);
     bc_mmap_add_mmio_observer(&ctx->cpu->mem, 0xFF4B, (bc_mmio_observe_t)gpu_mmio_write_trampoline, (bc_mmio_fetch_t)gpu_mmio_read_trampoline, ctx);
+
+    bc_mmap_add_mmio_observer(&ctx->cpu->mem, 0xFF46, (bc_mmio_observe_t)do_dma_request, NULL, ctx);
 
     ctx->gpu->set_intr_context(ctx);
     ctx->gpu->set_intr_V_BLANK((gpu_interrupt_handler_t)gpu_interrupt_request_VBLANK);

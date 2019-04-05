@@ -16,18 +16,23 @@ void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
     switch(icfg_type) {
     case MBC_TYPE_JUST_RAM:
         cart->mbc_handler = mbc_bankswitch_only_control;
+        cart->extram_handler = normal_extram_write;
         break;
     case MBC_TYPE_1:
         cart->mbc_handler = mbc1_control;
+        cart->extram_handler = normal_extram_write;
         break;
     case MBC_TYPE_2:
         cart->mbc_handler = mbc2_control;
+        cart->extram_handler = stupid_extram_write;
         break;
     case MBC_TYPE_3:
         cart->mbc_handler = mbc3_control;
+        cart->extram_handler = normal_extram_write;
         break;
     case MBC_TYPE_5:
         cart->mbc_handler = mbc5_control;
+        cart->extram_handler = normal_extram_write;
         break;
     default: break;
     }
