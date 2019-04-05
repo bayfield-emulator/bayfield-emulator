@@ -93,7 +93,6 @@ class GPU {
 		uint32_t* WINDOW_MEMORY;
 
 		/* TIMING LIST */
-		uint8_t SPRITE_DELAY[144];
 		uint32_t POSITION = 0;
 
 		/* POINTER TO INTERRUPT ROUTINES */
@@ -107,7 +106,8 @@ class GPU {
 		/* FUNCTIONS */ 
 		void clear(); // Write value to display to 'turn it off'
 
-		const uint32_t PALETTE[4] = {0xFFFFFFFF, 0xFFA8A8A8, 0xFF545454, 0xFF000000};
+		// const uint32_t PALETTE[4] = {0xFFFFFFFF, 0xFFA8A8A8, 0xFF545454, 0xFF000000}; //b&w
+		const uint32_t PALETTE[4] = {0xFF879457, 0xFF547659, 0xFF3B584C, 0xFF223A32}; //awful... err... authentic green
 
 	public:
 
