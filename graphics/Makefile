@@ -1,4 +1,8 @@
-CXXFLAGS += -Wall -g -std=c++11 -fsanitize=address
+CXXFLAGS += -Wall -g -std=c++11
+
+ifeq ($(ASAN),1)
+	CXXFLAGS += -fsanitize=address
+endif
 
 Demo: Demo.cpp
 	# swap clang++ for g++ if you're 2cool4LLVM

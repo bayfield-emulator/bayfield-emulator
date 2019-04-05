@@ -66,7 +66,7 @@ int main(int argc, char const *argv[]) {
             // std::cout << "frame time!" << std::endl;
             // Take the one that isn't currently owned by GPU
             // FIXME we should use a mutex just in case
-            SDL_Surface *front_buffer = cores.draw_buffers[cores.drawing_buffer? 0 : 1];
+            SDL_Surface *front_buffer = cores.draw_buffers[cores.drawing_buffer];
             SDL_BlitSurface(front_buffer, NULL, wind_buf, &gameboy_screen_rect);
             win->refresh(false);
             vtime = SDL_GetTicks();

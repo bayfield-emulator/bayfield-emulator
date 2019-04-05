@@ -1,5 +1,9 @@
 OBJS = cpu.o mem.o insn.o timer.o insn_extended.o mbc.o
-CFLAGS += -DDEBUG -DSIMULATE_PIPELINE=0 -Wall -g -fsanitize=address
+CFLAGS += -DDEBUG -DSIMULATE_PIPELINE=0 -Wall -g
+
+ifeq ($(ASAN),1)
+	CFLAGS += -fsanitize=address
+endif
 
 all: cputest libemucore.a
 
