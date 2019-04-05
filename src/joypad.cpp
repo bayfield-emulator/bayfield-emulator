@@ -87,6 +87,9 @@ void joyp_poll(bc_cpu_t *cpu, joyp_t *jpad, SDL_Event *ev) {
 	case SDLK_DOWN:
 		dir_delta |= 0x08;
 		break;
+	case SDLK_END:
+		panic("pressed end key");
+		break;
 
 	case SDLK_z: // i.e. button A
 		but_delta |= 0x01;
