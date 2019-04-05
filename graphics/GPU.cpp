@@ -254,7 +254,7 @@ void GPU::render(uint32_t clocks) {
 	uint32_t COMPLETED_CLOCKS = 0;
 
 	while (true) {
-		if (!GPU_REG_LCD_CONTROL & ENABLE_LCD_DISPLAY) { //display 'turned off' so clear it and return
+		if (!(GPU_REG_LCD_CONTROL & ENABLE_LCD_DISPLAY)) { //display 'turned off' so clear it and return
 			clear();
 			GPU_REG_LCDCUR_Y = 0;
 			POSITION = 0;

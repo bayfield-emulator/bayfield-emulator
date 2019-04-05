@@ -29,7 +29,8 @@ int main(int argc, char const *argv[]) {
 
     SDL_Init(SDL_INIT_VIDEO);
 
-    emu_shared_context_t cores = {0};
+    emu_shared_context_t cores;
+    memset(&cores, 0, sizeof(emu_shared_context_t));
     init_cores(&cores);
     if (!load_rom(&cores, argv[1])) {
         std::cerr << "Couldn't load ROM!" << std::endl;

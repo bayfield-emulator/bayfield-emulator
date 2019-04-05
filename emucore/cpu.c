@@ -160,7 +160,9 @@ void bc_cpu_step(bc_cpu_t *cpu, int clocks) {
             break;
         } else {
             const insn_desc_t *t = cpu->current_instruction;
+            #if SIMULATE_PIPELINE
             uint16_t save_pc = cpu->regs.PC;
+            #endif
             uint16_t save_param = cpu->instruction_param;
             cpu->regs.PC += t->param_count + 1;
 
