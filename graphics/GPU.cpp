@@ -21,7 +21,7 @@ GPU::GPU() {
 	WINDOW_BUFFER = (uint32_t *) malloc(sizeof(uint32_t) * 256 * 256);
 	SPRITE_BUFFER = (uint32_t *) malloc(sizeof(uint32_t) * 256 * 256);
 	TILES_BG = VRAM;
-	TILES_SPRITES = VRAM + (2 * KB);
+	TILES_SPRITES = VRAM;
 	BG_MAP = VRAM + (6 * KB);
 	WINDOW_MAP = VRAM + (7 * KB);
 	OAM = (uint32_t *) malloc(sizeof(uint32_t) * 40);
@@ -107,20 +107,21 @@ void GPU::set_win_pos(uint8_t x, uint8_t y) {
 
 //draw the sprites to a buffer
 void GPU::draw_sprites() {
+	memset(SPRITE_BUFFER, 0x00, sizeof(uint32_t) * 256 * 256);
 	memset(SPRITE_DELAY, 0x00, (sizeof(uint8_t) * 144)); //clear sprite delay array
 	for (uint8_t oam_pos = 0; oam_pos < 40; oam_pos++) {
 
-		uint32_t* SPRT_DATA_ADDR = OAM + oam_pos;
+		uint8_t* SPRT_DATA_ADDR = (uint8_t *)(OAM + oam_pos);
 
-		uint8_t spr_x = *SPRT_DATA_ADDR >> 24;
-		uint8_t spr_y = *SPRT_DATA_ADDR >> 16;
-		uint8_t spr_tile_id = *SPRT_DATA_ADDR >> 8;
-		bool priority = *SPRT_DATA_ADDR >> 7; /* TODO */
-		bool flip_x = *SPRT_DATA_ADDR >> 6;
-		bool flip_y = *SPRT_DATA_ADDR >> 5;
-		bool palette = *SPRT_DATA_ADDR >> 4;
+		uint8_t spr_x = SPRT_DATA_ADDR[1];
+		uint8_t spr_y = SPRT_DATA_ADDR[0];
+		uint8_t spr_tile_id = SPRT_DATA_ADDR[2];
+		bool priority = (SPRT_DATA_ADDR[3] >> 7) & 0x1; /* TODO */
+		bool flip_x = (SPRT_DATA_ADDR[3] >> 6) & 0x1;
+		bool flip_y = (SPRT_DATA_ADDR[3] >> 5) & 0x1;
+		bool palette = (SPRT_DATA_ADDR[3] >> 4) & 0x1;
 
-		uint16_t* TILE_ADDR = (uint16_t *) TILES_SPRITES + spr_tile_id * 8;
+		uint16_t* TILE_ADDR = (uint16_t *)(TILES_SPRITES + spr_tile_id * 16);
 
 		/* If sprite is on screen, draw it  */
 		if (spr_y > 8 /* TODO: OR Y > 0 IN SPRITE MODE 1 (8x16)*/) {
