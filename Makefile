@@ -1,7 +1,7 @@
 BAYFIELDGB_SRC = src/bayfield_main.cpp src/emu_thread.cpp src/rom_utils.cpp src/clock.cpp src/joypad.cpp
 STATIC_LIBS = graphics/libgfx.a emucore/libemucore.a
-LDFLAGS += -lSDL2
-CXXFLAGS += -std=c++11 -g -Wall -DDEBUG
+LDFLAGS += -lSDL2 -lpthread
+CXXFLAGS += -std=c++11 -O2 -Wall -DDEBUG
 
 ifeq ($(ASAN),1)
 	CXXFLAGS += -fsanitize=address

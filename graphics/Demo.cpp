@@ -67,11 +67,11 @@ int main(int argc, char const *argv[]) {
 	JDM = !stream.get();
 
 	//rom info
-	cout << "   TITLE: " << TITLE << endl;
+/*	cout << "   TITLE: " << TITLE << endl;
 	cout << "ROM TYPE: " << (uint16_t) ROM_TYPE << endl;
 	cout << "ROM SIZE: " << (uint16_t) ROM_SIZE << endl;
 	cout << "RAM SIZE: " << (uint16_t) RAM_SIZE << endl;
-	cout << "JAPANESE: " << (bool) JDM << endl;
+	cout << "JAPANESE: " << (bool) JDM << endl;*/
 
 	//set up window
 	Window* win = new Window(WINDOW_W, WINDOW_H);

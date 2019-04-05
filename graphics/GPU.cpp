@@ -28,7 +28,6 @@ GPU::GPU() {
 	memset(BG_MAP, 0xFF, (sizeof(uint8_t) * 32 * 32));
 	memset(WINDOW_MAP, 0xFF, (sizeof(uint8_t) * 32 * 32));
 	memset(OAM, 0x00, (sizeof(uint32_t) * 40));
-	memset(SPRITE_DELAY, 0x00, (sizeof(uint8_t) * 144));
 }
 
 // destructor
@@ -108,7 +107,6 @@ void GPU::set_win_pos(uint8_t x, uint8_t y) {
 //draw the sprites to a buffer
 void GPU::draw_sprites() {
 	memset(SPRITE_BUFFER, 0x00, sizeof(uint32_t) * 256 * 256);
-	memset(SPRITE_DELAY, 0x00, (sizeof(uint8_t) * 144)); //clear sprite delay array
 	for (uint8_t oam_pos = 0; oam_pos < 40; oam_pos++) {
 
 		uint8_t* SPRT_DATA_ADDR = (uint8_t *)(OAM + oam_pos);
@@ -126,14 +124,12 @@ void GPU::draw_sprites() {
 		/* If sprite is on screen, draw it  */
 		if (spr_y > 8 /* TODO: OR Y > 0 IN SPRITE MODE 1 (8x16)*/) {
 
-			spr_y -= 8; //convert to top | TODO: 16 for double height sprites
+			spr_y -= 16; //convert to top | TODO: 16 for double height sprites
 			spr_x -= 8; //convert to left
 
 			// copy [tile -> buffer] loops
 			for (int16_t y = 0; y < 8; y++)	{
 				if (((int16_t) spr_y) + y < 0 || spr_y + y > 144) continue; //skip lines off screen
-
-				SPRITE_DELAY[spr_y + y] += 4;
 
 				for (int16_t x = 0; x < 8; x++) {
 					if (((int16_t) spr_x) + x < 0 || spr_x + x > 160) continue; //skip pixels off screen

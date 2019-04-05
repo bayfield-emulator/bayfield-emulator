@@ -93,7 +93,6 @@ class GPU {
 		uint32_t* WINDOW_MEMORY;
 
 		/* TIMING LIST */
-		uint8_t SPRITE_DELAY[144];
 		uint32_t POSITION = 0;
 
 		/* POINTER TO INTERRUPT ROUTINES */
