@@ -273,8 +273,8 @@ void GPU::render(uint32_t clocks) {
 
 			if ((COMPLETED_CLOCKS + POSITION) > 65664) { //ENTER V-BLANK
 				GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_V_BLANK); //set v-blank mode
-				if (((COMPLETED_CLOCKS + POSITION) == 65665) && (GPU_REG_LCD_STATUS & INTR_V_BLANK)) {
-					if (F_INTR_VBL != NULL) F_INTR_VBL();  /* V_BLANK INTERRUPT */
+				if (((COMPLETED_CLOCKS + POSITION) == 65665) && 1 /*(GPU_REG_LCD_STATUS & INTR_V_BLANK)*/) {
+					if (F_INTR_VBL != NULL) F_INTR_VBL(INTR_FUNC_CONTEXT);  /* V_BLANK INTERRUPT */
 				}
 				COMPLETED_CLOCKS++;
 				if (!((COMPLETED_CLOCKS + POSITION) % 456)) GPU_REG_LCDCUR_Y++;
@@ -284,12 +284,12 @@ void GPU::render(uint32_t clocks) {
 				switch ((COMPLETED_CLOCKS + POSITION) % 456) {
 					case 0: //before OAM read, check for interrupt on this line
 						if ((GPU_REG_LCD_STATUS & INTR_LYC_EQ_LY) && (GPU_REG_LY_CMP == GPU_REG_LCDCUR_Y)) {
-							if (F_INTR_LYC != NULL) F_INTR_LYC(); /* LY_CMP INTERRUPT */
+							if (F_INTR_LYC != NULL) F_INTR_LYC(INTR_FUNC_CONTEXT); /* LY_CMP INTERRUPT */
 						}
 					case 1 ... 79: //OAM READ
 						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_OAM_READ); //set OAM read mode
 						if (((COMPLETED_CLOCKS + POSITION) % 456) == 0 && (GPU_REG_LCD_STATUS & INTR_OAM)) {
-							if (F_INTR_OAM != NULL) F_INTR_OAM();  /* OAM INTERRUPT */
+							if (F_INTR_OAM != NULL) F_INTR_OAM(INTR_FUNC_CONTEXT);  /* OAM INTERRUPT */
 						}
 						COMPLETED_CLOCKS++;
 						break;
@@ -330,7 +330,7 @@ void GPU::render(uint32_t clocks) {
 					case 252 ... 454: //H-BLANK
 						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_H_BLANK); //set h-blank mode
 						if (((COMPLETED_CLOCKS + POSITION) % 456) == 252 && (GPU_REG_LCD_STATUS & INTR_H_BLANK)) {
-							if (F_INTR_HBL != NULL) F_INTR_HBL();  /* H-BLANK INTERRUPT */
+							if (F_INTR_HBL != NULL) F_INTR_HBL(INTR_FUNC_CONTEXT);  /* H-BLANK INTERRUPT */
 						}
 						COMPLETED_CLOCKS++;
 						break;
@@ -426,19 +426,23 @@ void GPU::set_FF(uint8_t reg_no, uint8_t value) {
 	}
 }
 
-void GPU::set_intr_LYC(void (* intr)()){
+void GPU::set_intr_context(void *ctx){
+	INTR_FUNC_CONTEXT = ctx;
+}
+
+void GPU::set_intr_LYC(gpu_interrupt_handler_t intr){
 	F_INTR_LYC = intr;
 }
 
-void GPU::set_intr_OAM(void (* intr)()){
+void GPU::set_intr_OAM(gpu_interrupt_handler_t intr){
 	F_INTR_OAM = intr;
 }
 
-void GPU::set_intr_H_BLANK(void (* intr)()){
+void GPU::set_intr_H_BLANK(gpu_interrupt_handler_t intr){
 	F_INTR_HBL = intr;
 }
 
-void GPU::set_intr_V_BLANK(void (* intr)()){
+void GPU::set_intr_V_BLANK(gpu_interrupt_handler_t intr){
 	F_INTR_VBL = intr;
 }
 

@@ -720,9 +720,11 @@ static void IMP_edi(bc_cpu_t *cpu, int opcode, int cycle, int param) {
 
 static void IMP_stop(bc_cpu_t *cpu, int opcode, int cycle, int param) {
     if (opcode == 0x10) {
-        panic("CPU stopped");
+        cpu->halt = 1;
+        debug_log("CPU stopped");
     } else {
         cpu->halt = 1;
+        debug_log("CPU halted");
     }
 }
 

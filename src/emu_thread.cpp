@@ -59,13 +59,23 @@ void panic(const char *fmt, ...) {
     exit(1);
 }
 
-uint8_t gpu_mmio_write_trampoline(bc_cpu_t *cpu, emu_shared_context_t *ctx, uint16_t addr, uint8_t reg_val) {
+static void gpu_interrupt_request_VBLANK(emu_shared_context_t *ctx) {
+    // debug_log("vblanking now");
+    bc_request_interrupt(ctx->cpu, IF_VBLANK);
+}
+
+static void gpu_interrupt_request_STAT(emu_shared_context_t *ctx) {
+    // debug_log("lcds now");
+    bc_request_interrupt(ctx->cpu, IF_LCDSTAT);
+}
+
+static uint8_t gpu_mmio_write_trampoline(bc_cpu_t *cpu, emu_shared_context_t *ctx, uint16_t addr, uint8_t reg_val) {
     debug_log("GPU MMIO write! %x to %x", reg_val, addr);
     ctx->gpu->set_FF(addr & 0xFF, reg_val);
     return 0;
 }
 
-uint8_t gpu_mmio_read_trampoline(bc_cpu_t *cpu, emu_shared_context_t *ctx, uint16_t addr, uint8_t reg_val) {
+static uint8_t gpu_mmio_read_trampoline(bc_cpu_t *cpu, emu_shared_context_t *ctx, uint16_t addr, uint8_t reg_val) {
     return ctx->gpu->get_FF(addr & 0xFF);
 }
 
@@ -107,6 +117,11 @@ void init_cores(emu_shared_context_t *ctx) {
     bc_mmap_add_mmio_observer(&ctx->cpu->mem, 0xFF4A, (bc_mmio_observe_t)gpu_mmio_write_trampoline, (bc_mmio_fetch_t)gpu_mmio_read_trampoline, ctx);
     bc_mmap_add_mmio_observer(&ctx->cpu->mem, 0xFF4B, (bc_mmio_observe_t)gpu_mmio_write_trampoline, (bc_mmio_fetch_t)gpu_mmio_read_trampoline, ctx);
 
+    ctx->gpu->set_intr_context(ctx);
+    ctx->gpu->set_intr_V_BLANK((gpu_interrupt_handler_t)gpu_interrupt_request_VBLANK);
+    ctx->gpu->set_intr_OAM((gpu_interrupt_handler_t)gpu_interrupt_request_STAT);
+    ctx->gpu->set_intr_H_BLANK((gpu_interrupt_handler_t)gpu_interrupt_request_STAT);
+    ctx->gpu->set_intr_LYC((gpu_interrupt_handler_t)gpu_interrupt_request_STAT);
 }
 
 void release_cores(emu_shared_context_t *ctx) {
@@ -126,13 +141,13 @@ static void swap_buffers(emu_shared_context_t *ctx) {
 
 static void run_hardware(emu_shared_context_t *ctx, int ncycs) {
     debug_assert(ncycs > 0 && (ncycs % 4) == 0, "Need a multiple of 4 clocks");
-    bc_cpu_step(ctx->cpu, ncycs);
-    ctx->gpu->render(ncycs);
-    // while (ncycs > 0) {
-    //     bc_cpu_step(ctx->cpu, 16);
-    //     ctx->gpu->render(16);
-    //     ncycs -= 16;
-    // }
+    // bc_cpu_step(ctx->cpu, ncycs);
+    // ctx->gpu->render(ncycs);
+    while (ncycs > 0) {
+        bc_cpu_step(ctx->cpu, 16);
+        ctx->gpu->render(16);
+        ncycs -= 16;
+    }
 }
 
 void emu_thread_go(emu_shared_context_t *ctx) {
@@ -198,8 +213,8 @@ void emu_thread_go(emu_shared_context_t *ctx) {
         } else {
             sleep_time = (time_left - (step_time2 * nsteps_left)) / nsteps_left;
         }
-        printf("Step time: %d        Steps left: %d      Sleep time: %d       usec left: %d\n",
-            step_time2, nsteps_left, sleep_time, time_left);
+        // printf("Step time: %d        Steps left: %d      Sleep time: %d       usec left: %d\n",
+        //    step_time2, nsteps_left, sleep_time, time_left);
         usleep(sleep_time); 
     }
 }

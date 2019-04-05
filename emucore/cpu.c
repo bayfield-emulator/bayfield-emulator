@@ -192,7 +192,6 @@ void bc_cpu_reset(bc_cpu_t *cpu) {
     bc_mmap_putvalue(&cpu->mem, 0xFF06, 0); // timer mod: 0
     bc_mmap_putvalue(&cpu->mem, 0xFF07, 0); // timer ctl: 4.096khz
 
-#if 0
     bc_mmap_putvalue(&cpu->mem, 0xFF10, 0x80); 
     bc_mmap_putvalue(&cpu->mem, 0xFF11, 0xBF); 
     bc_mmap_putvalue(&cpu->mem, 0xFF12, 0xF3); 
@@ -211,7 +210,18 @@ void bc_cpu_reset(bc_cpu_t *cpu) {
     bc_mmap_putvalue(&cpu->mem, 0xFF24, 0x77); 
     bc_mmap_putvalue(&cpu->mem, 0xFF25, 0xF3); 
     bc_mmap_putvalue(&cpu->mem, 0xFF26, 0xF1); 
-#endif
+
+    bc_mmap_putvalue(&cpu->mem, 0xFF40, 0x91);
+    bc_mmap_putvalue(&cpu->mem, 0xFF42, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF43, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF45, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF47, 0xFC);
+    bc_mmap_putvalue(&cpu->mem, 0xFF48, 0xFF);
+    bc_mmap_putvalue(&cpu->mem, 0xFF49, 0xFF);
+    bc_mmap_putvalue(&cpu->mem, 0xFF4A, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF4B, 0x00);
+
+    cpu->irq_mask = 0;
 }
 
 void bc_cpu_release(bc_cpu_t *cpu) {

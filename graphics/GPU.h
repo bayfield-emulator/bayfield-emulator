@@ -56,6 +56,9 @@ NICK
 #ifndef GB_GPU_H
 #define GB_GPU_H
 
+// The type of an interrupt handler function pointer
+typedef void (*gpu_interrupt_handler_t)(void *);
+
 class GPU {
 	private:
 
@@ -94,10 +97,12 @@ class GPU {
 		uint32_t POSITION = 0;
 
 		/* POINTER TO INTERRUPT ROUTINES */
-		void (*F_INTR_LYC)(void);
-		void (*F_INTR_OAM)(void);
-		void (*F_INTR_HBL)(void);
-		void (*F_INTR_VBL)(void);
+		gpu_interrupt_handler_t F_INTR_LYC;
+		gpu_interrupt_handler_t F_INTR_OAM;
+		gpu_interrupt_handler_t F_INTR_HBL;
+		gpu_interrupt_handler_t F_INTR_VBL;
+		/* Pass this to interrupt functions */
+		void *INTR_FUNC_CONTEXT = 0;
 
 		/* FUNCTIONS */ 
 		void clear(); // Write value to display to 'turn it off'
@@ -170,10 +175,11 @@ class GPU {
 		void set_FF(uint8_t reg_no, uint8_t value);
 
 		/* Set function to call when respective interrupt is triggered */
-		void set_intr_LYC(void (* intr)());
-		void set_intr_OAM(void (* intr)());
-		void set_intr_H_BLANK(void (* intr)());
-		void set_intr_V_BLANK(void (* intr)());
+		void set_intr_LYC(gpu_interrupt_handler_t intr);
+		void set_intr_OAM(gpu_interrupt_handler_t intr);
+		void set_intr_H_BLANK(gpu_interrupt_handler_t intr);
+		void set_intr_V_BLANK(gpu_interrupt_handler_t intr);
+		void set_intr_context(void *ctx);
 };
 
 #endif
