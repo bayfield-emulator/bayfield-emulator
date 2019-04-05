@@ -46,8 +46,8 @@ int joyp_set(joyp_t *jpad, uint8_t direction, uint8_t buttons) {
 
 uint8_t joyp_get_state(bc_cpu_t *cpu, joyp_t *jpad, uint16_t addr, uint8_t jp_reg) {
 	// based on whether bit 4 or bit 5 of jp_reg is 0, return direction or button respectively
-	if ((jp_reg & 0x30) == 0x10) return jpad->button_state;
-	else return jpad->direction_state;
+	if ((jp_reg & 0x30) == 0x10) return jpad->direction_state;
+	else return jpad->button_state;
 }
 
 uint8_t joyp_set_sel(bc_cpu_t *cpu, joyp_t *jpad, uint16_t addr, uint8_t jp_reg) {
