@@ -1,5 +1,5 @@
 OBJS = cpu.o mem.o insn.o timer.o insn_extended.o mbc.o
-CFLAGS += -DDEBUG -DSIMULATE_PIPELINE=0 -Wall -g -O3
+CFLAGS += -DDEBUG -DSIMULATE_PIPELINE=0 -Wall -g -fsanitize=address
 
 all: cputest libemucore.a
 

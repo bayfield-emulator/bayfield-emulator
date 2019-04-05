@@ -13,6 +13,25 @@ void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
     enum mbc_type icfg_type = bc_determine_mbc_type_from_header(full_image);
     cart->mbc_type = icfg_type;
 
+    switch(icfg_type) {
+    case MBC_TYPE_JUST_RAM:
+        cart->mbc_handler = mbc_bankswitch_only_control;
+        break;
+    case MBC_TYPE_1:
+        cart->mbc_handler = mbc1_control;
+        break;
+    case MBC_TYPE_2:
+        cart->mbc_handler = mbc2_control;
+        break;
+    case MBC_TYPE_3:
+        cart->mbc_handler = mbc3_control;
+        break;
+    case MBC_TYPE_5:
+        cart->mbc_handler = mbc5_control;
+        break;
+    default: break;
+    }
+
     switch(full_image[0x0149]) {
     case 1:
         cart->extram_usable_size = 0x500;
@@ -36,6 +55,7 @@ void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
         break;
     }
 
+    cart->mbc_context = (mbc_context_t *)calloc(sizeof(mbc_context_t), 1);
     cart->extram = cart->extram_base;
 }
 

@@ -46,6 +46,23 @@ void stupid_extram_write(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
     mem->rom.extram[addr - 0xA000] = write_val & 0xf;
 }
 
+void mbc_bankswitch_only_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
+    if (addr < 0x2000) {
+        mem->rom.mbc_context->enable_ram = ((write_val & 0xf) == 0xa);
+        return;
+    }
+
+    if (addr < 0x4000) {
+        int real_banknum = write_val & 0xf;
+        if (real_banknum == 0) {
+            real_banknum++;
+        }
+        mem->rom.mbc_context->rom_bank = real_banknum;
+        mem->rom.bankx = mem->rom.rom + (0x4000 * real_banknum);
+        return;
+    }
+}
+
 void mbc1_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
     if (addr < 0x2000) {
         mem->rom.mbc_context->enable_ram = ((write_val & 0xf) == 0xa);

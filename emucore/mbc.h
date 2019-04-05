@@ -33,6 +33,7 @@ typedef struct mbc_context {
 } mbc_context_t;
 
 enum mbc_type bc_determine_mbc_type_from_header(uint8_t *romdata);
+void mbc_bankswitch_only_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
 void mbc1_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
 void mbc2_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
 void mbc3_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
