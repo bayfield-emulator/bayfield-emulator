@@ -40,23 +40,23 @@ void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
     switch(full_image[0x0149]) {
     case 1:
         cart->extram_usable_size = 0x500;
-        cart->extram_base = (uint8_t *)malloc(0x500);
+        cart->extram_base = (uint8_t *)calloc(0x500, sizeof(uint8_t));
         break;
     case 2:
         cart->extram_usable_size = 0x2000;
-        cart->extram_base = (uint8_t *)malloc(0x2000);
+        cart->extram_base = (uint8_t *)calloc(0x2000, sizeof(uint8_t));
         break;
     case 3:
         cart->extram_usable_size = 0x2000;
-        cart->extram_base = (uint8_t *)malloc(0x2000 * 4);
+        cart->extram_base = (uint8_t *)calloc(0x2000 * 4, sizeof(uint8_t));
         break;
     case 4:
         cart->extram_usable_size = 0x2000;
-        cart->extram_base = (uint8_t *)malloc(0x2000 * 16);
+        cart->extram_base = (uint8_t *)calloc(0x2000 * 16, sizeof(uint8_t));
         break;
     case 5:
         cart->extram_usable_size = 0x2000;
-        cart->extram_base = (uint8_t *)malloc(0x2000 * 8);
+        cart->extram_base = (uint8_t *)calloc(0x2000 * 8, sizeof(uint8_t));
         break;
     }
 
@@ -116,6 +116,6 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
     printf("TITLE: %s \n"
            "ROM TYPE: %x \n"
            "ROM SIZE: %lx \n"
-           "RAM_SIZE: %x \n", ctx->rom_title, mbc, rom_size, ram_size);
+           "RAM SIZE: %x \n", ctx->rom_title, mbc, rom_size, ram_size);
     return true;
 }
