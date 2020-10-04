@@ -8,6 +8,8 @@ NICK
 #include <string.h>	//memset
 #include <iostream> //malloc
 
+#include <iomanip>
+
 #define BUFFER_W_H 			0x20
 #define TILE_SIZE 			0x10
 #define KB 					0x400
@@ -48,6 +50,9 @@ NICK
 #define MODE_PIXEL_TF	0b11
 #define MODE_H_BLANK	0b00
 #define MODE_V_BLANK	0b01
+
+#define SCREEN_WIDTH	160
+#define SCREEN_HEIGHT	144
 
 /* TODO:
 	ALL BITS
@@ -106,6 +111,15 @@ class GPU {
 		/* FUNCTIONS */ 
 		void clear(); // Write value to display to 'turn it off'
 
+		/* Render sprites to buffer */
+		void draw_sprites();
+
+		/* Render window to buffer */
+		void draw_window();
+
+		/* Render background tiles to buffer */
+		void draw_bg();
+
 		// const uint32_t PALETTE[4] = {0xFFFFFFFF, 0xFFA8A8A8, 0xFF545454, 0xFF000000}; //b&w
 		const uint32_t PALETTE[4] = {0xFF879457, 0xFF547659, 0xFF3B584C, 0xFF223A32}; //awful... err... authentic green
 
@@ -120,44 +134,8 @@ class GPU {
 		/* Setup */
 		void init(uint32_t* ptr_to_win_memory);
 
-		/* Change the colours assigned to the 2-bit background values */
-		void remap_bg_colours(uint8_t map);
-
-		/* Change the colours assigned to 2-bit sprite values in the first sprite value */
-		void remap_s0_colours(uint8_t map);
-		
-		/* Change the colours assigned to 2-bit sprite values in the second sprite value */
-		void remap_s1_colours(uint8_t map);
-
-		/* Copy input array to GPU tile memory */
-		void add_bg_tile(int id, uint8_t* tile);
-
-		/* Copy input array to GPU tile memory */
-		void add_sprite_tile(int id, uint8_t* sprite);
-
-		/* Set object sprite, x, y, flip, palette and priority */
-		void set_sprite_data(uint8_t pos, uint8_t x, uint8_t y, uint8_t id, uint8_t misc);
-
-		/* Set background tile [id] to background map at [x] [y] */
-		void set_bg_tile(int x, int y, int id);
-
-		/* Set background tile [id] to background map at [x] [y] */
-		void set_window_tile(int x, int y, int id);
-
-		/* Set scroll register values (absolute) */
-		void set_scroll(int8_t x, int8_t y);
-
-		/* Set the window's coordinates */
-		void set_win_pos(uint8_t x, uint8_t y);
-
-		/* Render sprites to buffer */
-		void draw_sprites(); //not done yet
-
-		/* Render window to buffer */
-		void draw_window(); //not done yet		
-
-		/* Render background tiles to buffer */
-		void draw_bg();
+		/* Redraw all layers */
+		void redraw();
 
 		/* Simulate [clocks] cycles of the PPU*/
 		void render(uint32_t clocks);

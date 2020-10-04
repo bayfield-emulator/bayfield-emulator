@@ -63,9 +63,7 @@ static void gpu_interrupt_request_VBLANK(emu_shared_context_t *ctx) {
     // debug_log("vblanking now");
     bc_request_interrupt(ctx->cpu, IF_VBLANK);
 
-    ctx->gpu->draw_bg();
-    ctx->gpu->draw_window();
-    ctx->gpu->draw_sprites();
+    ctx->gpu->redraw();
 }
 
 static void gpu_interrupt_request_STAT(emu_shared_context_t *ctx) {
@@ -203,8 +201,8 @@ void emu_thread_go(emu_shared_context_t *ctx) {
 
         if (SDL_GetTicks() - frame_counter_epoch >= 1000) {
             frame_counter_epoch = SDL_GetTicks();
-            printf("\t\t\t\t\tFPS: %d\n", fps);
-            printf("\t\t\t\t\tCycs ran: %d\n", cps);
+            // printf("\t\t\t\t\tFPS: %d\n", fps);
+            // printf("\t\t\t\t\tCycs ran: %d\n", cps);
             fps = 0;
             cps = 0;
         }

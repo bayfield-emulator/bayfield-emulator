@@ -230,3 +230,7 @@ void bc_cpu_release(bc_cpu_t *cpu) {
     bc_mmap_release(&cpu->mem);
     free(cpu);
 }
+
+/* TODO */
+// Instruction 0xD3
+// "put16 on MBC", bank switching

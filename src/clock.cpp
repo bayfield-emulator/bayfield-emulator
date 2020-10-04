@@ -30,7 +30,9 @@ uint32_t usec_since(uint32_t usec) {
         return us - usec;
     }
 }
+
 #else
+
 // Then we can do it the normal way.
 uint32_t usec_since(uint32_t usec) {
     struct timespec ts;
@@ -42,8 +44,8 @@ uint32_t usec_since(uint32_t usec) {
         // it overflowed
         return (UINT32_MAX - usec) + us;
     } else {
-        // printf("usec_since(%u): %u\n", usec, us - usec);
         return us - usec;
     }
 }
+
 #endif

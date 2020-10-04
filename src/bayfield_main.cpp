@@ -12,6 +12,8 @@
 #include "bayfield.h"
 #include "joypad.h"
 
+#define SCALE 3
+
 SDL_Surface *copy_frame(void) {
     SDL_Surface *ret = SDL_LoadBMP("eframe.bmp");
     if (!ret) {
@@ -39,7 +41,7 @@ int main(int argc, char const *argv[]) {
     bool quit = false;
 
     //set up window
-    Window *win = new Window(256, 212);
+    Window *win = new Window(256 * SCALE, 212 * SCALE);
     win->setTitle(cores.rom_title);
     win->setColour(0);
     win->refresh(true);
@@ -50,9 +52,10 @@ int main(int argc, char const *argv[]) {
 
     SDL_Surface *frame = copy_frame();
     // Adjust this if you want to put the screen somewhere else
-    SDL_Rect gameboy_screen_rect = (SDL_Rect){48, 28, 160, 144};
+    SDL_Rect gameboy_screen_rect = (SDL_Rect){48 * SCALE, 28 * SCALE, 160 * SCALE, 144 * SCALE};
+    SDL_Rect win_size = (SDL_Rect){0, 0, 256 * SCALE, 212 * SCALE};
     if (frame) {
-        SDL_BlitSurface(frame, NULL, wind_buf, NULL);
+        SDL_BlitScaled(frame, NULL, wind_buf, &win_size);
         SDL_FreeSurface(frame);
     }
 
@@ -64,11 +67,10 @@ int main(int argc, char const *argv[]) {
     //While application is running
     while (!quit) {
         if (SDL_GetTicks() - vtime > 16) {
-            // std::cout << "frame time!" << std::endl;
             // Take the one that isn't currently owned by GPU
             // FIXME we should use a mutex just in case
             SDL_Surface *front_buffer = cores.draw_buffers[cores.drawing_buffer];
-            SDL_BlitSurface(front_buffer, NULL, wind_buf, &gameboy_screen_rect);
+            SDL_BlitScaled(front_buffer, NULL, wind_buf, &gameboy_screen_rect);
             win->refresh(false);
             vtime = SDL_GetTicks();
         }
@@ -87,7 +89,6 @@ int main(int argc, char const *argv[]) {
             break;
         case SDL_QUIT:
             quit = true;
-            cores.stop = 1;
             break;
         default:
             break;
