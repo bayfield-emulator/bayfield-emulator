@@ -22,7 +22,7 @@ SDL_Surface *copy_frame(void) {
     return ret;
 }
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char** args) {
     //test args
     if (argc < 2) {
         std::cerr << "Please provide a file name" << std::endl;
@@ -34,7 +34,7 @@ int main(int argc, char const *argv[]) {
     emu_shared_context_t cores;
     memset(&cores, 0, sizeof(emu_shared_context_t));
     init_cores(&cores);
-    if (!load_rom(&cores, argv[1])) {
+    if (!load_rom(&cores, args[1])) {
         std::cerr << "Couldn't load ROM!" << std::endl;
     }
 
