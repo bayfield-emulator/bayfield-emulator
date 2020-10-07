@@ -25,7 +25,7 @@ void GPU::draw_sprites() {
 		int16_t spr_x = (int16_t) SPRT_DATA_ADDR[1];
 		int16_t spr_y = (int16_t) SPRT_DATA_ADDR[0];
 		uint8_t spr_tile_id = SPRT_DATA_ADDR[2];
-		bool priority = (SPRT_DATA_ADDR[3] >> 7) & 0x1; /* TODO */
+		// bool priority = (SPRT_DATA_ADDR[3] >> 7) & 0x1; /* TODO */
 		bool flip_y = (SPRT_DATA_ADDR[3] >> 6) & 0x1;
 		bool flip_x = (SPRT_DATA_ADDR[3] >> 5) & 0x1;
 		bool palette = (SPRT_DATA_ADDR[3] >> 4) & 0x1;

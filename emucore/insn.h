@@ -19,7 +19,7 @@ typedef struct instruction {
 } insn_desc_t;
 
 // The master instruction array
-insn_desc_t const instructions[256];
+extern insn_desc_t const instructions[256];
 
 const insn_desc_t *select_extended_instruction(int opcode);
 

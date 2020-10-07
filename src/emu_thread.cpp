@@ -156,13 +156,6 @@ void release_cores(emu_shared_context_t *ctx) {
     SDL_FreeSurface(ctx->draw_buffers[1]);
 }
 
-static void swap_buffers(emu_shared_context_t *ctx) {
-    int next_buf = (ctx->drawing_buffer + 1) % 2;
-    // FIXME there needs to be a proper API for this
-    ctx->gpu->init((uint32_t *)ctx->draw_buffers[next_buf]->pixels);
-    ctx->drawing_buffer = next_buf;
-}
-
 static void run_hardware(emu_shared_context_t *ctx, int ncycs) {
     debug_assert(ncycs > 0 && (ncycs % 4) == 0, "Need a multiple of 4 clocks");
     // bc_cpu_step(ctx->cpu, ncycs);
@@ -184,8 +177,8 @@ void emu_thread_go(emu_shared_context_t *ctx) {
     int fps = 0;
     int cps = 0;
 
-    uint32_t step_time;
-    uint32_t step_time2;
+    int64_t step_time;
+    int64_t step_time2;
 
     while (1) {
         step_time = usec_since(0);
@@ -229,7 +222,7 @@ void emu_thread_go(emu_shared_context_t *ctx) {
         // over the number of sleeps we have left
         int sleep_time;
         if (step_time2 * nsteps_left >= time_left) {
-            printf("Warning: over budget! %d > %d\n", step_time2 * nsteps_left, time_left);
+            printf("Warning: over budget! %lld > %d\n", step_time2 * nsteps_left, time_left);
             sleep_time = 0;
         } else if (nsteps_left == 0) {
             // Nothing left to do so sleep until the next second

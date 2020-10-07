@@ -115,7 +115,7 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
     //rom info
     printf("TITLE: %s \n"
            "ROM TYPE: %x \n"
-           "ROM SIZE: %lx \n"
+           "ROM SIZE: %llx \n"
            "RAM SIZE: %x \n", ctx->rom_title, mbc, rom_size, ram_size);
     return true;
 }

@@ -1,0 +1,24 @@
+1 VERSIONINFO
+FILEVERSION     1,1,0,0
+PRODUCTVERSION  1,1,0,0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904E4"
+    BEGIN
+      VALUE "CompanyName", "TEAM BAYFIELD EMULATION"
+      VALUE "FileDescription", "Bayfield Gameboy Emulator"
+      VALUE "FileVersion", "1.1.0"
+      VALUE "InternalName", "bayfield_gb"
+      VALUE "LegalCopyright", "TEAM BAYFIELD EMULATION"
+      VALUE "OriginalFilename", "Bayfield.exe"
+      VALUE "ProductName", "BAYFIELD EMULATOR"
+      VALUE "ProductVersion", "1.1.0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 1252
+  END
+END
+2 ICON "icon.ico"

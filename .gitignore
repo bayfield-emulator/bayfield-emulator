@@ -17,8 +17,16 @@
 # Ignore executables and object files
 demo
 cputest
+*.exe
 *.a
 *.o
+*.res
 
 # Hidden FUSE files
 .fuse_hidden*
+
+# Windows library DLLS
+*.dll
+
+# Photoshop asset files
+*.psd

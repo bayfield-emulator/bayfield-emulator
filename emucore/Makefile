@@ -1,5 +1,5 @@
 OBJS = cpu.o mem.o insn.o timer.o insn_extended.o mbc.o
-CFLAGS += -DDEBUG -DSIMULATE_PIPELINE=0 -Wall -g
+CFLAGS += -O2 -Wall -DSIMULATE_PIPELINE=0 #-DDEBUG
 
 ifeq ($(ASAN),1)
 	CFLAGS += -fsanitize=address
@@ -13,8 +13,7 @@ all: cputest libemucore.a
 	$(CC) -c $< $(CFLAGS)
 
 libemucore.a: $(OBJS)
-	ar -rc $@ $^
-	ranlib -s $@
+	ar -rcs $@ $^
 
 cputest: cputest.o libemucore.a
 	$(CC) -o $@ ${CFLAGS} ${LDFLAGS} $^
