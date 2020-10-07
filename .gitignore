@@ -4,7 +4,6 @@
 *.gb
 
 # Dumps & Logs
-*.bmp
 *log*.txt
 *.dmp
 
@@ -30,3 +29,6 @@ cputest
 
 # Photoshop asset files
 *.psd
+
+# Packaged builds
+*.zip

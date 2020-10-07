@@ -15,10 +15,7 @@
 #define SCALE 3
 
 SDL_Surface *copy_frame(void) {
-    SDL_Surface *ret = SDL_LoadBMP("eframe.bmp");
-    if (!ret) {
-        ret = SDL_LoadBMP("src/eframe.bmp");
-    }
+    SDL_Surface *ret = SDL_LoadBMP("assets/eframe.bmp");
     return ret;
 }
 
