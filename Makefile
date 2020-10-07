@@ -8,6 +8,7 @@ ifeq ($(OS),Windows_NT)
 	OUTPUT := $(OUTPUT).exe
 	LDFLAGS += -lmingw32 -lSDL2main -lSDL2.dll -lpthread -luser32 -lgdi32 -ldxguid -mwindows
 else
+	UNAME_S := $(shell uname -s)
 	LDFLAGS += -lSDL2 -lpthread
 endif
 
@@ -37,3 +38,16 @@ clean:
 	rm $(OUTPUT) ||:
 	$(MAKE) -C emucore/ clean
 	$(MAKE) -C graphics/ clean
+
+pack:
+ifeq ($(OS),Windows_NT)
+	zip -r9 "WINDOWS x86-64.zip" Bayfield.exe libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll SDL2.dll assets\\eframe.bmp
+else
+ifeq ($(UNAME_S),Linux)
+	zip -r9 "LINUX x86-64.zip" Bayfield assets/eframe.bmp
+endif
+ifeq ($(UNAME_S),Darwin)
+	zip -r9 "MACOS x86-64.zip" Bayfield assets/eframe.bmp
+endif
+endif
+	
