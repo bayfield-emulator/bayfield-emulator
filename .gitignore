@@ -3,6 +3,9 @@
 # TOTALLY LEGAL ROMs
 *.gb
 
+# BGB save files
+*.sav
+
 # Dumps & Logs
 *log*.txt
 *.dmp
