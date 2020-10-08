@@ -11,6 +11,7 @@
 #include "Window.h"
 #include "bayfield.h"
 #include "joypad.h"
+#include "file_picker.h"
 
 #define SCALE 3
 
@@ -20,21 +21,33 @@ SDL_Surface *copy_frame(void) {
 }
 
 int main(int argc, char** args) {
-    //test args
-    if (argc < 2) {
+    char *rom_path = NULL;
+    SDL_Init(SDL_INIT_VIDEO);
+
+    // Check if the argv provided path is a real file first. OS X will sometimes
+    // add args if it was a UI launch.
+    if (argc > 1) {
+        if (access(args[1], F_OK) == 0) {
+            rom_path = strdup(args[1]);
+        } else {
+            std::cerr << "The specified file does not exist." << std::endl;
+        }
+    }
+
+    if (!rom_path && fp_get_user_path(&rom_path)) {
         std::cerr << "Please provide a file name" << std::endl;
         return 1;
     }
 
-    SDL_Init(SDL_INIT_VIDEO);
-
     emu_shared_context_t cores;
     memset(&cores, 0, sizeof(emu_shared_context_t));
     init_cores(&cores);
-    if (!load_rom(&cores, args[1])) {
+    if (!load_rom(&cores, rom_path)) {
         std::cerr << "Couldn't load ROM!" << std::endl;
+        return 1;
     }
 
+    free(rom_path);
     bool quit = false;
 
     //set up window

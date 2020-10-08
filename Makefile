@@ -7,9 +7,16 @@ OUTPUT = Bayfield
 ifeq ($(OS),Windows_NT)
 	OUTPUT := $(OUTPUT).exe
 	LDFLAGS += -lmingw32 -lSDL2main -lSDL2.dll -lpthread -luser32 -lgdi32 -ldxguid -mwindows
+	BAYFIELDGB_SRC += src/file_picker_windows.cpp
 else
 	UNAME_S := $(shell uname -s)
 	LDFLAGS += -lSDL2 -lpthread
+	ifeq ($(UNAME_S),Darwin)
+		BAYFIELDGB_SRC += src/file_picker_cocoa.mm
+		LDFLAGS += -framework Cocoa
+	else
+		BAYFIELDGB_SRC += src/file_picker_none.cpp
+	endif
 endif
 
 ifeq ($(ASAN),1)
