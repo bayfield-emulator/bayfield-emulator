@@ -15,8 +15,23 @@
 
 #define SCALE 3
 
-SDL_Surface *copy_frame(void) {
-    SDL_Surface *ret = SDL_LoadBMP("assets/eframe.bmp");
+SDL_Surface *copy_frame(const char *executable_path) {
+    const char *frame_rel = "assets/eframe.bmp";
+    SDL_Surface *ret;
+    char *path;
+
+    if (executable_path[0] != '/') {
+        ret = SDL_LoadBMP(frame_rel);
+        return ret;
+    }
+
+    // If launched with an absolute path, check for eframe relative to the executable.
+    path = new char[strlen(executable_path) + strlen(frame_rel) + 1];
+    memcpy(path, executable_path, strlen(executable_path) + 1);
+    memcpy(strrchr(path, '/') + 1, frame_rel, strlen(frame_rel) + 1);
+
+    ret = SDL_LoadBMP(path);
+    delete[] path;
     return ret;
 }
 
@@ -60,7 +75,7 @@ int main(int argc, char** args) {
     // composited onto the window.
     SDL_Surface *wind_buf = win->getSurface();
 
-    SDL_Surface *frame = copy_frame();
+    SDL_Surface *frame = copy_frame(args[0]);
     // Adjust this if you want to put the screen somewhere else
     SDL_Rect gameboy_screen_rect = (SDL_Rect){48 * SCALE, 28 * SCALE, 160 * SCALE, 144 * SCALE};
     SDL_Rect win_size = (SDL_Rect){0, 0, 256 * SCALE, 212 * SCALE};

@@ -14,6 +14,10 @@ else
 	ifeq ($(UNAME_S),Darwin)
 		BAYFIELDGB_SRC += src/file_picker_cocoa.mm
 		LDFLAGS += -framework Cocoa
+
+		ifeq ($(BUILD_STYLE),static)
+			LDFLAGS = $(shell sdl2-config --static-libs)
+		endif
 	else
 		BAYFIELDGB_SRC += src/file_picker_none.cpp
 	endif
@@ -40,21 +44,28 @@ else
 	$(CXX) $(CXXFLAGS) -o $(OUTPUT) $(BAYFIELDGB_SRC) $(STATIC_LIBS) -Iemucore/ -Igraphics/ $(LDFLAGS)
 endif
 
-clean: 
+clean:
 	rm meta/meta.res ||:
 	rm $(OUTPUT) ||:
+	rm -rf Bayfield.app ||:
 	$(MAKE) -C emucore/ clean
 	$(MAKE) -C graphics/ clean
 
 pack:
 ifeq ($(OS),Windows_NT)
-	zip -r9 "WINDOWS x86-64.zip" Bayfield.exe libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll SDL2.dll assets\\eframe.bmp
+	zip -r9y "WINDOWS x86-64.zip" Bayfield.exe libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll SDL2.dll assets\\eframe.bmp
 else
 ifeq ($(UNAME_S),Linux)
-	zip -r9 "LINUX x86-64.zip" Bayfield assets/eframe.bmp
+	zip -r9y "LINUX x86-64.zip" Bayfield assets/eframe.bmp
 endif
 ifeq ($(UNAME_S),Darwin)
-	zip -r9 "MACOS x86-64.zip" Bayfield assets/eframe.bmp
+	mkdir -p Bayfield.app/Contents/MacOS Bayfield.app/Contents/Resources
+	cp Bayfield Bayfield.app/Contents/MacOS/Bayfield
+	cp meta/icon.icns Bayfield.app/Contents/Resources/Bayfield.icns
+	cp -r assets Bayfield.app/Contents/Resources/assets
+	ln -s ../Resources/assets Bayfield.app/Contents/MacOS/assets
+	cp meta/Info.plist Bayfield.app/Contents
+	codesign -s '-' Bayfield.app
+	zip -r9y "MACOS x86-64.zip" Bayfield.app
 endif
 endif
-	
