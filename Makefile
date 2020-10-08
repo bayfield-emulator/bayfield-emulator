@@ -59,10 +59,10 @@ ifeq ($(UNAME_S),Linux)
 	zip -r9y "LINUX x86-64.zip" Bayfield assets/eframe.bmp
 endif
 ifeq ($(UNAME_S),Darwin)
-	mkdir -p Bayfield.app/Contents/MacOS Bayfield.app/Contents/Resources
+	mkdir -p Bayfield.app/Contents/MacOS Bayfield.app/Contents/Resources/assets
 	cp Bayfield Bayfield.app/Contents/MacOS/Bayfield
 	cp meta/icon.icns Bayfield.app/Contents/Resources/Bayfield.icns
-	cp -r assets Bayfield.app/Contents/Resources/assets
+	cp assets/eframe.bmp Bayfield.app/Contents/Resources/assets/eframe.bmp
 	ln -s ../Resources/assets Bayfield.app/Contents/MacOS/assets
 	cp meta/Info.plist Bayfield.app/Contents
 	codesign -s '-' Bayfield.app
