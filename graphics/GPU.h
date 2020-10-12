@@ -100,6 +100,9 @@ class GPU {
 		/* TIMING LIST */
 		uint32_t POSITION = 0;
 
+		/* OAM SPRITE LINE DATA */
+		uint8_t OAM_SPR_DATA[10] = {};
+
 		/* POINTER TO INTERRUPT ROUTINES */
 		gpu_interrupt_handler_t F_INTR_LYC;
 		gpu_interrupt_handler_t F_INTR_OAM;
@@ -137,7 +140,7 @@ class GPU {
 		/* Redraw all layers */
 		void redraw();
 
-		/* Simulate [clocks] cycles of the PPU*/
+		/* Simulate [clocks] cycles of the PPU */
 		void render(uint32_t clocks);
 
 		/* Return VRAM */

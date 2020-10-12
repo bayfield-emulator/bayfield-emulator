@@ -14,6 +14,7 @@ void GPU::clear() {
 
 //draw the sprites to a buffer
 void GPU::draw_sprites() {
+#if 0
 	memset(SPRITE_BUFFER, 0x00, sizeof(uint32_t) * 256 * 256);
 
 	bool MODE_DOUBLE_HEIGHT = (GPU_REG_LCD_CONTROL & SIZE_OBJ);
@@ -59,9 +60,8 @@ void GPU::draw_sprites() {
 				uint16_t buf_pos = (x + spr_x) + (y + spr_y) * 256;
 
 				// look up what colour the saved bits represent, copy it over to buffer
-				// if it's colour 0, it's transparent, mark it as such
-				uint32_t colour = (C) ? PALETTE[C] : 0x00000000;
-				SPRITE_BUFFER[buf_pos] = colour;
+				// if it's colour 0, it's transparent, ignore it
+				if (C) SPRITE_BUFFER[buf_pos] = PALETTE[C];
 			}
 		}
 		// }
@@ -95,17 +95,18 @@ void GPU::draw_sprites() {
 					uint16_t buf_pos = (x + spr_x) + (y + spr_y) * 256;
 
 					// look up what colour the saved bits represent, copy it over to buffer
-					// if it's colour 0, it's transparent, mark it as such
-					uint32_t colour = (C) ? PALETTE[C] : 0x00000000;
-					SPRITE_BUFFER[buf_pos] = colour;
+					// if it's colour 0, it's transparent, ignore it
+					if (C) SPRITE_BUFFER[buf_pos] = PALETTE[C];
 				}
 			}
 		}
 	}
+#endif
 }
 
 //draw the window object to a buffer
 void GPU::draw_window() {
+#if 0
 	// loop over the tile map and look for tiles to be drawn
 	for (int tile_map_y = 0; tile_map_y < 32; tile_map_y++) {
 		for (int tile_map_x = 0; tile_map_x < 32; tile_map_x++) {
@@ -155,10 +156,12 @@ void GPU::draw_window() {
 			}
 		}
 	}
+#endif
 }
 
 //render tiles from background map, referring to background/shared VRAM for textures
 void GPU::draw_bg() {
+#if 0
 	// loop over the tile map and look for tiles to be drawn
 	for (int tile_map_y = 0; tile_map_y < 32; tile_map_y++) {
 		for (int tile_map_x = 0; tile_map_x < 32; tile_map_x++) {
@@ -210,6 +213,7 @@ void GPU::draw_bg() {
 			}
 		}
 	}
+#endif
 }
 
 /* PUBLIC */
@@ -267,9 +271,6 @@ void GPU::render(uint32_t clocks) {
 		}
 		while (GPU_REG_LCDCUR_Y < 154) {
 
-			uint8_t shifted_y = (GPU_REG_LCDCUR_Y + GPU_REG_SCROLLY);
-			uint8_t win_y = (GPU_REG_LCDCUR_Y - GPU_REG_WINDOWY);
-
 			if (COMPLETED_CLOCKS + 1 > clocks) { //if clocks is set to expire, save position and return
 				POSITION += COMPLETED_CLOCKS;
 				POSITION %= 70224;
@@ -291,43 +292,95 @@ void GPU::render(uint32_t clocks) {
 						if ((GPU_REG_LCD_STATUS & INTR_LYC_EQ_LY) && (GPU_REG_LY_CMP == GPU_REG_LCDCUR_Y)) {
 							if (F_INTR_LYC != NULL) F_INTR_LYC(INTR_FUNC_CONTEXT); /* LY_CMP INTERRUPT */
 						}
-					case 1 ... 79: //OAM READ
+					case 1: //OAM READ
 						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_OAM_READ); //set OAM read mode
-						if (((COMPLETED_CLOCKS + POSITION) % 456) == 0 && (GPU_REG_LCD_STATUS & INTR_OAM)) {
-							if (F_INTR_OAM != NULL) F_INTR_OAM(INTR_FUNC_CONTEXT);  /* OAM INTERRUPT */
+
+						/* Set up OAM sprite line array */
+
+						{
+
+						uint8_t last_pos = 0;
+						
+						/* Search through sprite list and find items that fall on the given line */
+						for (uint8_t i = 0; i < 10; i++) {
+
+							uint8_t* SPRT_DATA_ADDR = (uint8_t *) OAM;
+
+							for (uint8_t j = last_pos; j < 40; j++) {
+
+								// int16_t spr_x = (int16_t) SPRT_DATA_ADDR[1] - 8;
+								int16_t spr_y = (int16_t) SPRT_DATA_ADDR[0] - 16;
+
+								if (spr_y < GPU_REG_LCDCUR_Y && (spr_y + ((GPU_REG_LCD_CONTROL & SIZE_OBJ) ? 16 : 8) > GPU_REG_LCDCUR_Y)) { //if sprite appears on this line
+									OAM_SPR_DATA[i] = SPRT_DATA_ADDR[2]; //add tile ID
+									last_pos = ++j; //add next position to check
+									continue;
+								}
+
+								SPRT_DATA_ADDR++;
+							}
 						}
+
+						}
+
+						COMPLETED_CLOCKS++;
+						break;
+					case 2 ... 79: //OAM IDLE
 						COMPLETED_CLOCKS++;
 						break;
 					case 80 ... 239: //PIXEL TRANSFER
 						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_PIXEL_TF); //set pixel transfer read mode
 						{ //don't worry about this bracket
 
-						//replacement x coordinate for old loop
 						uint8_t x = ((COMPLETED_CLOCKS + POSITION) % 456) - 80;
+						uint8_t y = GPU_REG_LCDCUR_Y;
 
-						uint16_t BUFFER_POS = x + GPU_REG_LCDCUR_Y * 256;
+						// calculate horizontal shift
+						uint8_t shifted_x = (x + GPU_REG_SCROLLX);
+						// uint8_t win_x = (x - GPU_REG_WINDOWX - 7); //7 is a hard-coded value
+
+						// calculate vertical shift
+						uint8_t shifted_y = (GPU_REG_LCDCUR_Y + GPU_REG_SCROLLY);
+						// uint8_t win_y = (GPU_REG_LCDCUR_Y - GPU_REG_WINDOWY);
 
 						// check if background and window are enabled
 						if (GPU_REG_LCD_CONTROL & ENABLE_BG_WIN_DISPLAY) {
 
-							// calculate horizontal shift
-							uint8_t shifted_x = (x + GPU_REG_SCROLLX);
-							uint8_t win_x = (x - GPU_REG_WINDOWX - 7); //7 is a hard-coded value for reasons only Nintendo knows
-
-							// copy background buffer over
-							WINDOW_MEMORY[x + 160 * GPU_REG_LCDCUR_Y] = BG_BUFFER[shifted_x + 256 * shifted_y];
-
-							// copy window buffer over, if window draw enabled
-							if (GPU_REG_LCD_CONTROL & ENABLE_WINDOW) {
-								if (GPU_REG_LCDCUR_Y >= GPU_REG_WINDOWY && x >= GPU_REG_WINDOWX) WINDOW_MEMORY[x + 160 * GPU_REG_LCDCUR_Y] = WINDOW_BUFFER[win_x + 256 * win_y];
+							// this value in the map indicated it would be this tile (if it exists)
+							uint8_t *base;
+							if (GPU_REG_LCD_CONTROL & SELECT_BG_MAP) {
+								base = WINDOW_MAP;
+							} else {
+								base = BG_MAP;
 							}
-						}
+							uint8_t tile_id = base[(shifted_x >> 3) + (shifted_y >> 3) * 32];
 
-						// copy sprite buffer over, if sprite draw enabled
-						if (GPU_REG_LCD_CONTROL & ENABLE_OBJ) {
-							// ignore transparent pixels
-							if (SPRITE_BUFFER[BUFFER_POS] >> 24) {
-								WINDOW_MEMORY[x + GPU_REG_LCDCUR_Y * 160] = SPRITE_BUFFER[BUFFER_POS];
+							// real tile (memset in constructor guarantees this)
+							if (tile_id < 0xFF) {
+
+								uint16_t* TILE_ADDR;
+								if (GPU_REG_LCD_CONTROL & SELECT_BG_WIN_TILE) {
+									TILE_ADDR = (uint16_t *) TILES_BG + tile_id * 8;
+								} else {
+									int8_t *signed_tile_id = (int8_t *)&tile_id;
+									TILE_ADDR = (uint16_t *) (TILES_BG + 0x1000) + (*signed_tile_id) * 8;
+								}
+
+								// valid tile id
+								if (TILE_ADDR) {
+
+									// get value of line of pixels
+									uint16_t A = TILE_ADDR[shifted_y % 8];
+
+									// shuffle bits about to make sense of GB's storage format
+									// 0b0123456789abcdef -> 80, 91, a2, b3, etc.
+									uint8_t B = ((A >> (15 - (shifted_x % 8)) & 0x01) + (((A >> (7 - (shifted_x % 8))) & 0x01) << 1));
+
+									// run through palette remapping to correct colour
+									uint8_t C = (GPU_REG_PALETTE_BG >> (B << 1)) & 0x03;
+
+									WINDOW_MEMORY[x + y * SCREEN_WIDTH] = PALETTE[C];
+								}
 							}
 						}
 						} //don't worry about this bracket either
