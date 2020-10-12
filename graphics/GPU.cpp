@@ -330,63 +330,96 @@ void GPU::render(uint32_t clocks) {
 						break;
 					case 80 ... 239: //PIXEL TRANSFER
 						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_PIXEL_TF); //set pixel transfer read mode
-						{ //don't worry about this bracket
+						
+						{
 
 						uint8_t x = ((COMPLETED_CLOCKS + POSITION) % 456) - 80;
 						uint8_t y = GPU_REG_LCDCUR_Y;
 
 						// calculate horizontal shift
-						uint8_t shifted_x = (x + GPU_REG_SCROLLX);
-						// uint8_t win_x = (x - GPU_REG_WINDOWX - 7); //7 is a hard-coded value
+						uint8_t bg_sx = (x + GPU_REG_SCROLLX);
+						uint8_t win_x = (x - (GPU_REG_WINDOWX - 7)); //7 is a hard-coded value
 
 						// calculate vertical shift
-						uint8_t shifted_y = (GPU_REG_LCDCUR_Y + GPU_REG_SCROLLY);
-						// uint8_t win_y = (GPU_REG_LCDCUR_Y - GPU_REG_WINDOWY);
+						uint8_t bg_sy = (GPU_REG_LCDCUR_Y + GPU_REG_SCROLLY);
+						uint8_t win_y = (GPU_REG_LCDCUR_Y - GPU_REG_WINDOWY);
 
 						// check if background and window are enabled
 						if (GPU_REG_LCD_CONTROL & ENABLE_BG_WIN_DISPLAY) {
 
-							// this value in the map indicated it would be this tile (if it exists)
+						/* BACKGROUND DRAW */
 							uint8_t *base;
-							if (GPU_REG_LCD_CONTROL & SELECT_BG_MAP) {
+							if (GPU_REG_LCD_CONTROL & SELECT_BG_MAP) { // BG map mode
 								base = WINDOW_MAP;
 							} else {
 								base = BG_MAP;
 							}
-							uint8_t tile_id = base[(shifted_x >> 3) + (shifted_y >> 3) * 32];
+							uint8_t tile_id = base[(bg_sx >> 3) + (bg_sy >> 3) * 32];
 
-							// real tile (memset in constructor guarantees this)
-							if (tile_id < 0xFF) {
+							uint16_t* TILE_ADDR;
+							if (GPU_REG_LCD_CONTROL & SELECT_BG_WIN_TILE) {
+								TILE_ADDR = (uint16_t *) TILES_BG + tile_id * 8;
+							} else {
+								int8_t *signed_tile_id = (int8_t *)&tile_id;
+								TILE_ADDR = (uint16_t *) (TILES_BG + 0x1000) + (*signed_tile_id) * 8;
+							}
 
-								uint16_t* TILE_ADDR;
-								if (GPU_REG_LCD_CONTROL & SELECT_BG_WIN_TILE) {
-									TILE_ADDR = (uint16_t *) TILES_BG + tile_id * 8;
-								} else {
-									int8_t *signed_tile_id = (int8_t *)&tile_id;
-									TILE_ADDR = (uint16_t *) (TILES_BG + 0x1000) + (*signed_tile_id) * 8;
-								}
+							// get value of line of pixels
+							uint16_t A = TILE_ADDR[bg_sy % 8];
 
-								// valid tile id
-								if (TILE_ADDR) {
+							// shuffle bits
+							uint8_t B = ((A >> (15 - (bg_sx % 8)) & 0x01) + (((A >> (7 - (bg_sx % 8))) & 0x01) << 1));
+
+							// palette remapping
+							uint8_t C = (GPU_REG_PALETTE_BG >> (B << 1)) & 0x03;
+
+							// write new pixel data
+							WINDOW_MEMORY[x + y * SCREEN_WIDTH] = PALETTE[C];
+
+
+						/* WINDOW DRAW */
+							if (GPU_REG_LCD_CONTROL & ENABLE_WINDOW) { // Window draw is enabled
+								if (GPU_REG_WINDOWY <= y && (GPU_REG_WINDOWX - 7) <= x) { // Current pixel is in bounds of window
+
+									uint8_t *base;
+									if (GPU_REG_LCD_CONTROL & SELECT_WINDOW_MAP) { // Window map mode
+										base = WINDOW_MAP;
+									} else {
+										base = BG_MAP;
+									}
+									uint8_t tile_id = base[(win_x >> 3) + (win_y >> 3) * 32];
+
+
+									uint16_t* TILE_ADDR;
+									if (GPU_REG_LCD_CONTROL & SELECT_BG_WIN_TILE) {
+										TILE_ADDR = (uint16_t *) TILES_BG + tile_id * 8;
+									} else {
+										int8_t *signed_tile_id = (int8_t *)&tile_id;
+										TILE_ADDR = (uint16_t *) (TILES_BG + 0x1000) + (*signed_tile_id) * 8;
+									}
 
 									// get value of line of pixels
-									uint16_t A = TILE_ADDR[shifted_y % 8];
+									uint16_t A = TILE_ADDR[win_y % 8];
 
-									// shuffle bits about to make sense of GB's storage format
-									// 0b0123456789abcdef -> 80, 91, a2, b3, etc.
-									uint8_t B = ((A >> (15 - (shifted_x % 8)) & 0x01) + (((A >> (7 - (shifted_x % 8))) & 0x01) << 1));
+									// shuffle bits
+									uint8_t B = ((A >> (15 - (win_x % 8)) & 0x01) + (((A >> (7 - (win_x % 8))) & 0x01) << 1));
 
-									// run through palette remapping to correct colour
+									// palette remapping
 									uint8_t C = (GPU_REG_PALETTE_BG >> (B << 1)) & 0x03;
 
+									// write new pixel data
 									WINDOW_MEMORY[x + y * SCREEN_WIDTH] = PALETTE[C];
 								}
 							}
 						}
-						} //don't worry about this bracket either
+
+						/* TODO: SPRITES HERE */
+
+						}
+
 						COMPLETED_CLOCKS++;
 						break;
-					case 240 ... 251: //wasted pixel transfer clocks (emulation doesn't need them but real unit does)
+					case 240 ... 251: //Wasted pixel transfer clocks (emulation doesn't need them but real unit does)
 						COMPLETED_CLOCKS++;
 						break; 
 					case 252 ... 454: //H-BLANK
