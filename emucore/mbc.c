@@ -46,6 +46,25 @@ void stupid_extram_write(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
     mem->rom.extram[addr - 0xA000] = write_val & 0xf;
 }
 
+void rtc_extram_write(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
+    if (mem->rom.mbc_context->multi_bits >= 0x08) {
+        // printf("set clock register: %x (%hx) %d\n", mem->rom.mbc_context->multi_bits, addr, (int)write_val);
+        return;
+    }
+
+    if (addr - 0xa000 >= mem->rom.extram_usable_size || !mem->rom.mbc_context->enable_ram) {
+        return;
+    }
+    mem->rom.extram[addr - 0xA000] = write_val;
+}
+
+// WIP
+// This handler is only called when a RTC register is selected in mbc3_control
+uint8_t rtc_extram_read(cpu_mmap_t *mem, uint16_t addr) {
+    // printf("rtc_extram_read: %x (%hx)\n", mem->rom.mbc_context->multi_bits, addr);
+    return 0x00;
+}
+
 void mbc_bankswitch_only_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
     if (addr < 0x2000) {
         mem->rom.mbc_context->enable_ram = ((write_val & 0xf) == 0xa);
@@ -131,10 +150,7 @@ void mbc2_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
 void mbc3_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
     if (addr < 0x2000) {
         mem->rom.mbc_context->enable_ram = ((write_val & 0xf) == 0xa);
-        return;
-    }
-
-    if (addr < 0x4000) {
+    } else if (addr < 0x4000) {
         int real_banknum = write_val & 0x7f;
         if (real_banknum == 0) {
             real_banknum++;
@@ -142,19 +158,38 @@ void mbc3_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
         mem->rom.mbc_context->rom_bank = real_banknum;
         mem->rom.bankx = mem->rom.rom + (0x4000 * real_banknum);
         return;
-    }
+    } else if (addr < 0x6000) {
+        // printf("ram bank select %d -> %hx\n", (int)write_val, addr);
+        int mb = write_val & 0xf;
+        mem->rom.mbc_context->multi_bits = mb;
 
-    if (addr < 0x6000) {
-        mem->rom.mbc_context->multi_bits = write_val & 0xf;
-        if ((write_val & 0xf) < 0x07) {
+        if (mb < 0x04) {
             mem->rom.extram = mem->rom.extram_base + (0x2000 * (write_val & 0xf));
-        } else {
-            panic("someone needs to implement RTC support here");
+            mem->rom.extram_read_handler = NULL;
+        } else if (mb >= 0x08 && mb <= 0x0C) {
+            // printf("rtc reg selected\n");
+            mem->rom.extram_read_handler = &rtc_extram_read;
         }
         return;
+    } else {
+        // printf("RTC latch register %d -> %hx\n", (int)write_val, addr);
+        int s = mem->rom.mbc_context->rtc_l_state;
+
+        if (s == 0 && write_val == 0) {
+            mem->rom.mbc_context->rtc_l_state = 1;
+        } else if (s == 1 && write_val == 1) {
+            mem->rom.mbc_context->rtc_l_state = 2;
+            // printf("RTC is now latched\n");
+        } else if (s == 2 && write_val == 0) {
+            mem->rom.mbc_context->rtc_l_state = 3;
+        } else if (s == 3 && write_val == 1) {
+            mem->rom.mbc_context->rtc_l_state = 0;
+            // printf("RTC is now unlatched\n");
+        } else {
+            mem->rom.mbc_context->rtc_l_state = (s & 2);
+        }
     }
 
-    panic("someone needs to implement RTC support here");
 }
 
 void mbc5_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {

@@ -9,6 +9,23 @@
 #include "Window.h"
 #include "bayfield.h"
 
+size_t real_ram_size(uint8_t mtype) {
+    switch(mtype) {
+    case 1:
+        return 0x500;
+    case 2:
+        return 0x2000;
+    case 3:
+        return 0x8000;
+    case 4:
+        return 0x20000;
+    case 5:
+        return 0x10000;
+    default:
+        return 0;
+    }
+}
+
 void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
     enum mbc_type icfg_type = bc_determine_mbc_type_from_header(full_image);
     cart->mbc_type = icfg_type;
@@ -28,7 +45,7 @@ void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
         break;
     case MBC_TYPE_3:
         cart->mbc_handler = mbc3_control;
-        cart->extram_handler = normal_extram_write;
+        cart->extram_handler = rtc_extram_write;
         break;
     case MBC_TYPE_5:
         cart->mbc_handler = mbc5_control;
@@ -58,6 +75,9 @@ void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
         cart->extram_usable_size = 0x2000;
         cart->extram_base = (uint8_t *)calloc(0x2000 * 8, sizeof(uint8_t));
         break;
+    default:
+        cart->extram_usable_size = 0;
+        break;
     }
 
     cart->mbc_context = (mbc_context_t *)calloc(sizeof(mbc_context_t), 1);
@@ -68,7 +88,7 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
     std::fstream stream(filename, std::ios::binary);
 	stream.open(filename, std::ios::in);
 
-	//test file existence 
+	//test file existence
 	if (!stream.is_open()) {
 		std::cerr << "Could not read file" << std::endl;
 		return false;
@@ -84,6 +104,7 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
     }
 
     stream.read((char *)full_image, rom_size);
+    stream.close();
 
     //assume file is legitimate ROM
     /*Title [16 bytes long from 0x0134]*/
@@ -107,7 +128,7 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
     my_rom.image_size = rom_size;
     my_rom.bank1 = full_image;
     my_rom.bankx = full_image + 16384;
-    
+
     setup_mbc(&my_rom, full_image);
 
     ctx->cpu->mem.rom = my_rom;
@@ -116,6 +137,91 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
     printf("TITLE: %s \n"
            "ROM TYPE: %x \n"
            "ROM SIZE: %llx \n"
-           "RAM SIZE: %x \n", ctx->rom_title, mbc, rom_size, ram_size);
+           "RAM SIZE: %x \n", ctx->rom_title, mbc, (uint64_t)rom_size, ram_size);
     return true;
+}
+
+// djb2 hash from http://www.cse.yorku.ca/~oz/hash.html
+uint32_t hash_header(uint8_t *rom_base) {
+    uint32_t hash = 5381;
+
+    uint8_t *end = rom_base + 0x150;
+    for (; rom_base < end; ++rom_base) {
+        hash = hash * 33 ^ *rom_base;
+    }
+
+    return hash;
+}
+
+int load_save(emu_shared_context_t *ctx, const char *filename) {
+    cartridge_t *cart = &(ctx->cpu->mem.rom);
+    if (!cart->extram_usable_size) {
+        return 0;
+    }
+
+    // [filename] + '.sav' + 0
+    size_t fn_max = strlen(filename) + 4 + 1;
+    char *path = (char *)calloc(fn_max, 1);
+    snprintf(path, fn_max, "%s.sav", filename);
+
+    uint32_t checksum = 0;
+    std::fstream stream(path, std::ios::in | std::ios::binary);
+
+    if (!stream.is_open()) {
+        std::cerr << "No previous save" << std::endl;
+        free(path);
+        return 1;
+    }
+
+    stream.read((char *)&checksum, 4);
+    stream.seekg(12, std::ios::cur);
+    uint32_t real_checksum = hash_header(cart->rom);
+
+    if (real_checksum != ntohl(checksum)) {
+        fprintf(stderr, "save is for wrong rom image: (sav)%x vs (rom)%x\n", checksum, real_checksum);
+        free(path);
+        return 1;
+    }
+
+    size_t ram_size = real_ram_size(cart->rom[0x0149]);
+    stream.read((char *)(cart->extram_base), ram_size);
+
+    if (stream.gcount() != ram_size) {
+        fprintf(stderr, "could not read full save image, expected %zu, got %zu\n",
+            ram_size, (size_t)stream.gcount());
+        free(path);
+        memset(cart->extram_base, 0, ram_size);
+        return 1;
+    }
+
+    stream.close();
+    free(path);
+    return 0;
+}
+
+int dump_save(emu_shared_context_t *ctx, const char *filename) {
+    cartridge_t *cart = &(ctx->cpu->mem.rom);
+    if (!cart->extram_usable_size) {
+        return 0;
+    }
+
+    // [filename] + '.sav' + 0
+    size_t fn_max = strlen(filename) + 4 + 1;
+    char *path = (char *)calloc(fn_max, 1);
+    snprintf(path, fn_max, "%s.sav", filename);
+
+    uint32_t real_checksum = htonl(hash_header(cart->rom));
+    std::fstream stream(path, std::ios::out | std::ios::binary);
+    free(path);
+
+    if (!stream.is_open()) {
+        std::cerr << "Could not open save file" << std::endl;
+        return 1;
+    }
+
+    stream.write((const char *)&real_checksum, 4);
+    stream.write("BAYFIELDSAVE", 12);
+    stream.write((const char *)(cart->extram_base), real_ram_size(cart->rom[0x0149]));
+    stream.close();
+    return 0;
 }

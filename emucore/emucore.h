@@ -27,6 +27,7 @@ typedef struct mbc_context mbc_context_t;
 
 typedef void (*bc_mbc_write_proc_t)(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
 typedef void (*bc_extram_write_proc_t)(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
+typedef uint8_t (*bc_extram_read_proc_t)(cpu_mmap_t *mem, uint16_t addr);
 
 typedef struct cart {
     size_t image_size;
@@ -36,8 +37,9 @@ typedef struct cart {
     bc_mbc_write_proc_t mbc_handler;
     /* The only reason this exists is because MBC2 carts only have 4 bits available per RAM byte,
      * so we'll mask it on write. There is no read function, we do it directly out of extram. */
-    /* We will actually need a read handler if we implement RTC support. */
     bc_extram_write_proc_t extram_handler;
+    bc_extram_read_proc_t extram_read_handler;
+
     mbc_context_t *mbc_context;
     uint16_t extram_usable_size;
 
