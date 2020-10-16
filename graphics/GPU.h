@@ -101,7 +101,8 @@ class GPU {
 		uint32_t POSITION = 0;
 
 		/* OAM SPRITE LINE DATA */
-		uint8_t OAM_SPR_DATA[10] = {};
+		uint8_t OAM_SPR_IDX[10] = {};
+		uint8_t OAM_SPR_XPOS[10] = {};
 
 		/* POINTER TO INTERRUPT ROUTINES */
 		gpu_interrupt_handler_t F_INTR_LYC;

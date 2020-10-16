@@ -292,33 +292,46 @@ void GPU::render(uint32_t clocks) {
 						if ((GPU_REG_LCD_STATUS & INTR_LYC_EQ_LY) && (GPU_REG_LY_CMP == GPU_REG_LCDCUR_Y)) {
 							if (F_INTR_LYC != NULL) F_INTR_LYC(INTR_FUNC_CONTEXT); /* LY_CMP INTERRUPT */
 						}
+						COMPLETED_CLOCKS++;
+						break;
 					case 1: //OAM READ
 						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_OAM_READ); //set OAM read mode
+
+						memset(OAM_SPR_IDX, 0xFF, (sizeof(uint8_t) * 10));
+						memset(OAM_SPR_XPOS, 0xFF, (sizeof(uint8_t) * 10));
 
 						/* Set up OAM sprite line array */
 
 						{
 
+						bool MODE_DOUBLE_HEIGHT = (GPU_REG_LCD_CONTROL & SIZE_OBJ);
+
 						uint8_t last_pos = 0;
 						
 						/* Search through sprite list and find items that fall on the given line */
-						for (uint8_t i = 0; i < 10; i++) {
 
-							uint8_t* SPRT_DATA_ADDR = (uint8_t *) OAM;
+						uint8_t* SPRT_DATA_ADDR;
+
+						for (uint8_t i = 0; i < 10; i++) {
 
 							for (uint8_t j = last_pos; j < 40; j++) {
 
-								// int16_t spr_x = (int16_t) SPRT_DATA_ADDR[1] - 8;
-								int16_t spr_y = (int16_t) SPRT_DATA_ADDR[0] - 16;
+								SPRT_DATA_ADDR = (uint8_t *)(OAM + j);
 
-								if (spr_y < GPU_REG_LCDCUR_Y && (spr_y + ((GPU_REG_LCD_CONTROL & SIZE_OBJ) ? 16 : 8) > GPU_REG_LCDCUR_Y)) { //if sprite appears on this line
-									OAM_SPR_DATA[i] = SPRT_DATA_ADDR[2]; //add tile ID
-									last_pos = ++j; //add next position to check
-									continue;
-								}
+								int16_t spr_y = ((int16_t) SPRT_DATA_ADDR[0]);
+								int16_t spr_x = ((int16_t) SPRT_DATA_ADDR[1]);
 
-								SPRT_DATA_ADDR++;
+								spr_y -= 16; //convert to top
+								spr_x -= 8; //convert to left
+
+								if ((spr_y <= GPU_REG_LCDCUR_Y) && (spr_y + (MODE_DOUBLE_HEIGHT ? 16 : 8) > GPU_REG_LCDCUR_Y)) { //if sprite appears on this line
+									OAM_SPR_IDX[i] = j; //add tile ID
+									OAM_SPR_XPOS[i] = spr_x; //add sprite's xpos
+									last_pos = j + 1; //add next position to check
+									break;
+								}								
 							}
+
 						}
 
 						}
@@ -330,7 +343,7 @@ void GPU::render(uint32_t clocks) {
 						break;
 					case 80 ... 239: //PIXEL TRANSFER
 						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_PIXEL_TF); //set pixel transfer read mode
-						
+
 						{
 
 						uint8_t x = ((COMPLETED_CLOCKS + POSITION) % 456) - 80;
@@ -347,7 +360,7 @@ void GPU::render(uint32_t clocks) {
 						// check if background and window are enabled
 						if (GPU_REG_LCD_CONTROL & ENABLE_BG_WIN_DISPLAY) {
 
-						/* BACKGROUND DRAW */
+							/* BACKGROUND DRAW */
 							uint8_t *base;
 							if (GPU_REG_LCD_CONTROL & SELECT_BG_MAP) { // BG map mode
 								base = WINDOW_MAP;
@@ -377,7 +390,7 @@ void GPU::render(uint32_t clocks) {
 							WINDOW_MEMORY[x + y * SCREEN_WIDTH] = PALETTE[C];
 
 
-						/* WINDOW DRAW */
+							/* WINDOW DRAW */
 							if (GPU_REG_LCD_CONTROL & ENABLE_WINDOW) { // Window draw is enabled
 								if (GPU_REG_WINDOWY <= y && (GPU_REG_WINDOWX - 7) <= x) { // Current pixel is in bounds of window
 
@@ -388,7 +401,6 @@ void GPU::render(uint32_t clocks) {
 										base = BG_MAP;
 									}
 									uint8_t tile_id = base[(win_x >> 3) + (win_y >> 3) * 32];
-
 
 									uint16_t* TILE_ADDR;
 									if (GPU_REG_LCD_CONTROL & SELECT_BG_WIN_TILE) {
@@ -413,10 +425,60 @@ void GPU::render(uint32_t clocks) {
 							}
 						}
 
-						/* TODO: SPRITES HERE */
+						/* SPRITES DRAW */
 
+						if (GPU_REG_LCD_CONTROL & ENABLE_OBJ) {
+
+							uint8_t index = 0xFF;
+
+							for (uint8_t i = 0; i < 10; i++) {
+								if (OAM_SPR_IDX[i] == 0xFF) break;
+								if (OAM_SPR_XPOS[i] <= x && OAM_SPR_XPOS[i] + 8 > x) {
+									index = OAM_SPR_IDX[i];
+									break;
+								}
+							}
+
+							if (index == 0xFF) { //index can't actually be above 40 so there's no sprite here
+								COMPLETED_CLOCKS++;
+								break;
+							}
+
+							uint8_t* SPRT_DATA_ADDR = (uint8_t *)(OAM + index);
+
+							int16_t spr_x = (int16_t) SPRT_DATA_ADDR[1];
+							int16_t spr_y = (int16_t) SPRT_DATA_ADDR[0];
+							uint8_t spr_tile_id = SPRT_DATA_ADDR[2];
+							bool priority = (SPRT_DATA_ADDR[3] >> 7) & 0x1;
+							bool flip_y   = (SPRT_DATA_ADDR[3] >> 6) & 0x1;
+							bool flip_x   = (SPRT_DATA_ADDR[3] >> 5) & 0x1;
+							bool palette  = (SPRT_DATA_ADDR[3] >> 4) & 0x1;
+
+							uint16_t* TILE_ADDR = (uint16_t *)(TILES_SPRITES + spr_tile_id * 16);
+
+							/* If sprite is on screen, draw it  */
+							spr_y -= 16; //convert to top
+							spr_x -= 8; //convert to left
+
+							uint16_t spr_nx = x - spr_x;
+							uint16_t spr_ny = y - spr_y;
+
+							// get value of line of pixels, flip if required
+							uint16_t A = TILE_ADDR[flip_y ? (7 - spr_ny) : spr_ny];
+
+							// flip x if required
+							uint16_t ux = (flip_x ? (7 - spr_nx) : spr_nx);
+
+							// shuffle bits about to make sense of GB's storage format
+							// 0b0123456789abcdef -> 80, 91, a2, b3, etc.
+							uint8_t B = ((A >> (15 - ux) & 0x01) + (((A >> (7 - ux)) & 0x01) << 1));
+
+							// run through palette remapping to correct colour
+							uint8_t C = (((palette) ? GPU_REG_PALETTE_S1 : GPU_REG_PALETTE_S0) >> (B << 1)) & 0x03;
+
+							if (C) WINDOW_MEMORY[x + y * SCREEN_WIDTH] = PALETTE[C];
 						}
-
+						}
 						COMPLETED_CLOCKS++;
 						break;
 					case 240 ... 251: //Wasted pixel transfer clocks (emulation doesn't need them but real unit does)
