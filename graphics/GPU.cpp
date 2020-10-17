@@ -12,210 +12,6 @@ void GPU::clear() {
 	memset(WINDOW_MEMORY, SCREEN_OFF_COLOUR, (sizeof(uint32_t) * 160 * 144));
 }
 
-//draw the sprites to a buffer
-void GPU::draw_sprites() {
-#if 0
-	memset(SPRITE_BUFFER, 0x00, sizeof(uint32_t) * 256 * 256);
-
-	bool MODE_DOUBLE_HEIGHT = (GPU_REG_LCD_CONTROL & SIZE_OBJ);
-
-	for (uint8_t oam_pos = 0; oam_pos < 40; oam_pos++) {
-
-		uint8_t* SPRT_DATA_ADDR = (uint8_t *)(OAM + oam_pos);
-
-		int16_t spr_x = (int16_t) SPRT_DATA_ADDR[1];
-		int16_t spr_y = (int16_t) SPRT_DATA_ADDR[0];
-		uint8_t spr_tile_id = SPRT_DATA_ADDR[2];
-		// bool priority = (SPRT_DATA_ADDR[3] >> 7) & 0x1; /* TODO */
-		bool flip_y = (SPRT_DATA_ADDR[3] >> 6) & 0x1;
-		bool flip_x = (SPRT_DATA_ADDR[3] >> 5) & 0x1;
-		bool palette = (SPRT_DATA_ADDR[3] >> 4) & 0x1;
-
-		uint16_t* TILE_ADDR = (uint16_t *)(TILES_SPRITES + spr_tile_id * 16);
-
-		/* If sprite is on screen, draw it  */
-		spr_y -= 16; //convert to top
-		spr_x -= 8; //convert to left
-
-		// copy [tile -> buffer] loops
-		for (int16_t y = 0; y < 8; y++)	{
-			if ((spr_y + y) < 0 || (spr_y + y) > SCREEN_HEIGHT) continue; //skip lines off screen
-
-			for (int16_t x = 0; x < 8; x++) {
-				if ((spr_x + x) < 0 || (spr_x + x) > SCREEN_WIDTH) continue; //skip pixels off screen
-
-				// get value of line of pixels, flip if required
-				uint16_t A = TILE_ADDR[flip_y ? (7 - y) : y];
-
-				// flip x if required
-				uint16_t ux = (flip_x ? (7 - x) : x);
-
-				// shuffle bits about to make sense of GB's storage format
-				// 0b0123456789abcdef -> 80, 91, a2, b3, etc.
-				uint8_t B = ((A >> (15 - ux) & 0x01) + (((A >> (7 - ux)) & 0x01) << 1));
-
-				// run through palette remapping to correct colour
-				uint8_t C = (((palette) ? GPU_REG_PALETTE_S1 : GPU_REG_PALETTE_S0) >> (B << 1)) & 0x03;
-
-				uint16_t buf_pos = (x + spr_x) + (y + spr_y) * 256;
-
-				// look up what colour the saved bits represent, copy it over to buffer
-				// if it's colour 0, it's transparent, ignore it
-				if (C) SPRITE_BUFFER[buf_pos] = PALETTE[C];
-			}
-		}
-		// }
-
-		/* If in 8x16 mode, draw lower tile */
-		if (MODE_DOUBLE_HEIGHT) {
-			/* Select next sprite */
-			TILE_ADDR = (uint16_t *)(TILES_SPRITES + (spr_tile_id + 1) * 16);
-			/* Move target draw area down by one tile */
-			spr_y += 8;
-
-			for (int16_t y = 0; y < 8; y++)	{
-				if ((spr_y + y) < 0 || (spr_y + y) > SCREEN_HEIGHT) continue; //skip lines off screen
-
-				for (int16_t x = 0; x < 8; x++) {
-					if ((spr_x + x) < 0 || (spr_x + x) > SCREEN_WIDTH) continue; //skip pixels off screen
-
-					// get value of line of pixels, flip if required
-					uint16_t A = TILE_ADDR[flip_y ? (7 - y) : y];
-
-					// flip x if required
-					uint16_t ux = (flip_x ? (7 - x) : x);
-
-					// shuffle bits about to make sense of GB's storage format
-					// 0b0123456789abcdef -> 80, 91, a2, b3, etc.
-					uint8_t B = ((A >> (15 - ux) & 0x01) + (((A >> (7 - ux)) & 0x01) << 1));
-
-					// run through palette remapping to correct colour
-					uint8_t C = (((palette) ? GPU_REG_PALETTE_S1 : GPU_REG_PALETTE_S0) >> (B << 1)) & 0x03;
-
-					uint16_t buf_pos = (x + spr_x) + (y + spr_y) * 256;
-
-					// look up what colour the saved bits represent, copy it over to buffer
-					// if it's colour 0, it's transparent, ignore it
-					if (C) SPRITE_BUFFER[buf_pos] = PALETTE[C];
-				}
-			}
-		}
-	}
-#endif
-}
-
-//draw the window object to a buffer
-void GPU::draw_window() {
-#if 0
-	// loop over the tile map and look for tiles to be drawn
-	for (int tile_map_y = 0; tile_map_y < 32; tile_map_y++) {
-		for (int tile_map_x = 0; tile_map_x < 32; tile_map_x++) {
-
-			// this value in the map indicated it would be this tile (if it exists)
-			uint8_t *base;
-			if (GPU_REG_LCD_CONTROL & SELECT_WINDOW_MAP) {
-				base = BG_MAP;
-			} else {
-				base = WINDOW_MAP; 
-			}
-			uint8_t tile_id = base[tile_map_x + tile_map_y * 32];
-
-			// not a tile (memset in constructor guarantees this)
-			if (tile_id == 0xFF) continue;
-
-			uint16_t* TILE_ADDR;
-			if (GPU_REG_LCD_CONTROL & SELECT_BG_WIN_TILE) {
-				TILE_ADDR = (uint16_t *) TILES_BG + tile_id * 8;
-			} else {
-				int8_t *signed_tile_id = (int8_t *)&tile_id;
-				TILE_ADDR = (uint16_t *) (TILES_BG + 0x1000) + (*signed_tile_id) * 8;
-			}
-
-			// copy [tile -> buffer] loops
-			for (int y = 0; y < 8; y++)	{
-				for (int x = 0; x < 8; x++) {
-
-					// get value of line of pixels
-					uint16_t A = TILE_ADDR[y];
-
-					// shuffle bits about to make sense of GB's storage format
-					// 0b0123456789abcdef -> 80, 91, a2, b3, etc.
-					uint8_t B = ((A >> (15 - x) & 0x01) + (((A >> (7 - x)) & 0x01) << 1));
-
-					// run through palette remapping to correct colour
-					uint8_t C = (GPU_REG_PALETTE_BG >> (B << 1)) & 0x03;
-
-					// absolute x and y coordinates to simplify math
-					int abs_x = (x + tile_map_x * 8);
-					int abs_y = (y + tile_map_y * 8);
-					int buf_pos = abs_x + abs_y * 256;
-
-					// look up what colour the saved bits represent, copy it over to buffer
-					WINDOW_BUFFER[buf_pos] = PALETTE[C];
-				}
-			}
-		}
-	}
-#endif
-}
-
-//render tiles from background map, referring to background/shared VRAM for textures
-void GPU::draw_bg() {
-#if 0
-	// loop over the tile map and look for tiles to be drawn
-	for (int tile_map_y = 0; tile_map_y < 32; tile_map_y++) {
-		for (int tile_map_x = 0; tile_map_x < 32; tile_map_x++) {
-
-			// this value in the map indicated it would be this tile (if it exists)
-			uint8_t *base;
-			if (GPU_REG_LCD_CONTROL & SELECT_BG_MAP) {
-				base = WINDOW_MAP;
-			} else {
-				base = BG_MAP; 
-			}
-			uint8_t tile_id = base[tile_map_x + tile_map_y * 32];
-
-			// not a tile (memset in constructor guarantees this)
-			if (tile_id == 0xFF) continue;
-
-			uint16_t* TILE_ADDR;
-			if (GPU_REG_LCD_CONTROL & SELECT_BG_WIN_TILE) {
-				TILE_ADDR = (uint16_t *) TILES_BG + tile_id * 8;
-			} else {
-				int8_t *signed_tile_id = (int8_t *)&tile_id;
-				TILE_ADDR = (uint16_t *) (TILES_BG + 0x1000) + (*signed_tile_id) * 8;
-			}
-
-			if (TILE_ADDR == 0x0) continue;
-
-			// copy [tile -> buffer] loops
-			for (int y = 0; y < 8; y++)	{
-				for (int x = 0; x < 8; x++) {
-
-					// get value of line of pixels
-					uint16_t A = TILE_ADDR[y];
-
-					// shuffle bits about to make sense of GB's storage format
-					// 0b0123456789abcdef -> 80, 91, a2, b3, etc.
-					uint8_t B = ((A >> (15 - x) & 0x01) + (((A >> (7 - x)) & 0x01) << 1));
-
-					// run through palette remapping to correct colour
-					uint8_t C = (GPU_REG_PALETTE_BG >> (B << 1)) & 0x03;
-
-					// absolute x and y coordinates to simplify math
-					int abs_x = (x + tile_map_x * 8);
-					int abs_y = (y + tile_map_y * 8);
-					int buf_pos = abs_x + abs_y * 256;
-
-					// look up what colour the saved bits represent, copy it over to buffer
-					BG_BUFFER[buf_pos] = PALETTE[C];
-				}
-			}
-		}
-	}
-#endif
-}
-
 /* PUBLIC */
 
 // constructor
@@ -250,11 +46,7 @@ void GPU::init(uint32_t* ptr_to_win_memory) {
 
 //simplified single call to draw
 //calling like this offers guarantees about order, important for sprites layer
-void GPU::redraw() {
-	draw_bg();
-	draw_window();
-	draw_sprites();
-}
+void GPU::redraw() {}
 
 //assemble all buffers and produce final frame
 // clocks: Number of cycles to simulate
@@ -292,26 +84,19 @@ void GPU::render(uint32_t clocks) {
 						if ((GPU_REG_LCD_STATUS & INTR_LYC_EQ_LY) && (GPU_REG_LY_CMP == GPU_REG_LCDCUR_Y)) {
 							if (F_INTR_LYC != NULL) F_INTR_LYC(INTR_FUNC_CONTEXT); /* LY_CMP INTERRUPT */
 						}
+						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_OAM_READ); //set OAM read mode
 						COMPLETED_CLOCKS++;
 						break;
 					case 1: //OAM READ
-						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_OAM_READ); //set OAM read mode
-
 						memset(OAM_SPR_IDX, 0xFF, (sizeof(uint8_t) * 10));
 						memset(OAM_SPR_XPOS, 0xFF, (sizeof(uint8_t) * 10));
 
-						/* Set up OAM sprite line array */
-
 						{
 
-						bool MODE_DOUBLE_HEIGHT = (GPU_REG_LCD_CONTROL & SIZE_OBJ);
-
 						uint8_t last_pos = 0;
-						
-						/* Search through sprite list and find items that fall on the given line */
-
 						uint8_t* SPRT_DATA_ADDR;
 
+						/* Search through sprite list and find items that fall on the given line */
 						for (uint8_t i = 0; i < 10; i++) {
 
 							for (uint8_t j = last_pos; j < 40; j++) {
@@ -324,7 +109,7 @@ void GPU::render(uint32_t clocks) {
 								spr_y -= 16; //convert to top
 								spr_x -= 8; //convert to left
 
-								if ((spr_y <= GPU_REG_LCDCUR_Y) && (spr_y + (MODE_DOUBLE_HEIGHT ? 16 : 8) > GPU_REG_LCDCUR_Y)) { //if sprite appears on this line
+								if ((spr_y <= GPU_REG_LCDCUR_Y) && (spr_y + ((GPU_REG_LCD_CONTROL & SIZE_OBJ) ? 16 : 8) > GPU_REG_LCDCUR_Y)) { //if sprite appears on this line
 									OAM_SPR_IDX[i] = j; //add tile ID
 									OAM_SPR_XPOS[i] = spr_x; //add sprite's xpos
 									last_pos = j + 1; //add next position to check
@@ -463,19 +248,19 @@ void GPU::render(uint32_t clocks) {
 							uint16_t spr_nx = x - spr_x;
 							uint16_t spr_ny = y - spr_y;
 
-							// get value of line of pixels, flip if required
+							// get value of line of pixels
 							uint16_t A = TILE_ADDR[flip_y ? (7 - spr_ny) : spr_ny];
 
 							// flip x if required
 							uint16_t ux = (flip_x ? (7 - spr_nx) : spr_nx);
 
-							// shuffle bits about to make sense of GB's storage format
-							// 0b0123456789abcdef -> 80, 91, a2, b3, etc.
+							// shuffle bits
 							uint8_t B = ((A >> (15 - ux) & 0x01) + (((A >> (7 - ux)) & 0x01) << 1));
 
-							// run through palette remapping to correct colour
+							// palette remapping
 							uint8_t C = (((palette) ? GPU_REG_PALETTE_S1 : GPU_REG_PALETTE_S0) >> (B << 1)) & 0x03;
 
+							// write new pixel data
 							if (C) WINDOW_MEMORY[x + y * SCREEN_WIDTH] = PALETTE[C];
 						}
 						}
@@ -604,10 +389,7 @@ void GPU::set_intr_V_BLANK(gpu_interrupt_handler_t intr){
 }
 
 /* TODO */
-// Sprite memory offset should be adjustable based on register setting
-// As above, but for window
 // Check default register values -> this would normally be set by the system before a program begins
 // Sprites disappearing near top of screen?
 // Sprite draw ordering (lower x priority)
 // Sprite priority flag
-// 10 sprite-per-line cap enforcement?

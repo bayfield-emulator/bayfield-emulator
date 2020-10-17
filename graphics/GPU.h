@@ -115,15 +115,6 @@ class GPU {
 		/* FUNCTIONS */ 
 		void clear(); // Write value to display to 'turn it off'
 
-		/* Render sprites to buffer */
-		void draw_sprites();
-
-		/* Render window to buffer */
-		void draw_window();
-
-		/* Render background tiles to buffer */
-		void draw_bg();
-
 		// const uint32_t PALETTE[4] = {0xFFFFFFFF, 0xFFA8A8A8, 0xFF545454, 0xFF000000}; //b&w
 		const uint32_t PALETTE[4] = {0xFF879457, 0xFF547659, 0xFF3B584C, 0xFF223A32}; //awful... err... authentic green
 
