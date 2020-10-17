@@ -5,12 +5,17 @@
 #include "emucore.h"
 #include "joypad.h"
 #include "GPU.h"
+#include "sound.h"
+
+#define AUDIO_SAMPLERATE 32768
 
 typedef struct {
     char rom_title[16];
     bc_cpu_t *cpu;
     GPU *gpu;
     joyp_t joypad;
+    SDL_AudioDeviceID audio_device;
+    sound_ctlr_t sound_controller;
     // Ideally, the GPU will tell us when it finishes a frame,
     // and we'll change the buffer in use so the main thread can always pull
     // a fully rendered image.
