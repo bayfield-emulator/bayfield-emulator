@@ -1,6 +1,7 @@
 #include "sound.h"
 #include "sound_internal.h"
 
+// per https://gbdev.gg8.se/wiki/articles/Gameboy_sound_hardware#Noise_Channel
 static const int noise_div[] = {8, 16, 32, 48, 64, 80, 96, 112};
 static const int xorbit[] = {0, 1, 1, 0};
 
@@ -21,7 +22,7 @@ static uint8_t write_ff21(void *gb, sound_ctlr_t *state, uint16_t addr, uint8_t 
 
 static uint8_t write_ff22(void *gb, sound_ctlr_t *state, uint16_t addr, uint8_t val) {
     state->noise_low = (val & 0x8) >> 3;
-    state->noise_timebase = noise_div[val & 0x7] << ((val >> 4) & 0xF);
+    state->noise_timebase = (noise_div[val & 0x7] << ((val >> 4) & 0xF)) / 8;
     return val;
 }
 
