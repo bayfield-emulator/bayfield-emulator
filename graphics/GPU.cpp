@@ -100,11 +100,8 @@ void GPU::render(uint32_t clocks) {
 						for (uint8_t i = 0; ((i < 40) && (pos < 10)); i++) {
 							SPRT_DATA_ADDR = (uint8_t *)(OAM + i);
 
-							int16_t spr_y = (int16_t) SPRT_DATA_ADDR[0];
-							int16_t spr_x = (int16_t) SPRT_DATA_ADDR[1];
-
-							spr_y -= 16; //convert to top
-							spr_x -= 8; //convert to left
+							int16_t spr_y = ((int16_t) SPRT_DATA_ADDR[0]) - 16;
+							uint8_t spr_x = SPRT_DATA_ADDR[1] - 8;
 
 							if ((spr_y <= GPU_REG_LCDCUR_Y) && (spr_y + ((GPU_REG_LCD_CONTROL & SIZE_OBJ) ? 16 : 8) > GPU_REG_LCDCUR_Y)) { //if sprite appears on this line
 								OAM_SPR_IDX[pos] = i; //add tile ID
@@ -160,7 +157,7 @@ void GPU::render(uint32_t clocks) {
 							uint16_t A = TILE_ADDR[bg_sy % 8];
 
 							// shuffle bits
-							uint8_t B = ((A >> (15 - (bg_sx % 8)) & 0x01) + (((A >> (7 - (bg_sx % 8))) & 0x01) << 1));
+							uint8_t B = (((A >> (7 - (bg_sx % 8))) & 0x01) + ((A >> (15 - (bg_sx % 8)) & 0x01) << 1));
 
 							// palette remapping
 							uint8_t C = (GPU_REG_PALETTE_BG >> (B << 1)) & 0x03;
@@ -193,7 +190,7 @@ void GPU::render(uint32_t clocks) {
 									uint16_t A = TILE_ADDR[win_y % 8];
 
 									// shuffle bits
-									uint8_t B = ((A >> (15 - (win_x % 8)) & 0x01) + (((A >> (7 - (win_x % 8))) & 0x01) << 1));
+									uint8_t B = (((A >> (7 - (win_x % 8))) & 0x01) + ((A >> (15 - (win_x % 8)) & 0x01) << 1));
 
 									// palette remapping
 									uint8_t C = (GPU_REG_PALETTE_BG >> (B << 1)) & 0x03;
@@ -250,7 +247,7 @@ void GPU::render(uint32_t clocks) {
 							uint16_t ux = (flip_x ? (7 - spr_nx) : spr_nx);
 
 							// shuffle bits
-							uint8_t B = ((A >> (15 - ux) & 0x01) + (((A >> (7 - ux)) & 0x01) << 1));
+							uint8_t B = (((A >> (7 - ux)) & 0x01) + ((A >> (15 - ux) & 0x01) << 1));
 
 							// palette remapping
 							uint8_t C = (((palette) ? GPU_REG_PALETTE_S1 : GPU_REG_PALETTE_S0) >> (B << 1)) & 0x03;
