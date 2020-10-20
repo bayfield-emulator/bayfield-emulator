@@ -115,7 +115,7 @@ class GPU {
 		/* FUNCTIONS */ 
 		void clear(); // Write value to display to 'turn it off'
 
-		// const uint32_t PALETTE[4] = {0xFFFFFFFF, 0xFFA8A8A8, 0xFF545454, 0xFF000000}; //b&w
+		// const uint32_t PALETTE[4] = {0xFFFFFFFF, 0xFFB0B0B0, 0xFF686868, 0xFF000000}; //b&w
 		const uint32_t PALETTE[4] = {0xFF879457, 0xFF547659, 0xFF3B584C, 0xFF223A32}; //awful... err... authentic green
 
 	public:

@@ -93,30 +93,24 @@ void GPU::render(uint32_t clocks) {
 
 						{
 
-						uint8_t last_pos = 0;
+						uint8_t pos = 0;
 						uint8_t* SPRT_DATA_ADDR;
 
 						/* Search through sprite list and find items that fall on the given line */
-						for (uint8_t i = 0; i < 10; i++) {
+						for (uint8_t i = 0; ((i < 40) && (pos < 10)); i++) {
+							SPRT_DATA_ADDR = (uint8_t *)(OAM + i);
 
-							for (uint8_t j = last_pos; j < 40; j++) {
+							int16_t spr_y = (int16_t) SPRT_DATA_ADDR[0];
+							int16_t spr_x = (int16_t) SPRT_DATA_ADDR[1];
 
-								SPRT_DATA_ADDR = (uint8_t *)(OAM + j);
+							spr_y -= 16; //convert to top
+							spr_x -= 8; //convert to left
 
-								int16_t spr_y = ((int16_t) SPRT_DATA_ADDR[0]);
-								int16_t spr_x = ((int16_t) SPRT_DATA_ADDR[1]);
-
-								spr_y -= 16; //convert to top
-								spr_x -= 8; //convert to left
-
-								if ((spr_y <= GPU_REG_LCDCUR_Y) && (spr_y + ((GPU_REG_LCD_CONTROL & SIZE_OBJ) ? 16 : 8) > GPU_REG_LCDCUR_Y)) { //if sprite appears on this line
-									OAM_SPR_IDX[i] = j; //add tile ID
-									OAM_SPR_XPOS[i] = spr_x; //add sprite's xpos
-									last_pos = j + 1; //add next position to check
-									break;
-								}								
+							if ((spr_y <= GPU_REG_LCDCUR_Y) && (spr_y + ((GPU_REG_LCD_CONTROL & SIZE_OBJ) ? 16 : 8) > GPU_REG_LCDCUR_Y)) { //if sprite appears on this line
+								OAM_SPR_IDX[pos] = i; //add tile ID
+								OAM_SPR_XPOS[pos] = spr_x; //add sprite's xpos
+								pos++;
 							}
-
 						}
 
 						}
@@ -215,6 +209,7 @@ void GPU::render(uint32_t clocks) {
 						if (GPU_REG_LCD_CONTROL & ENABLE_OBJ) {
 
 							uint8_t index = 0xFF;
+							uint16_t window_pos = (x + y * SCREEN_WIDTH);
 
 							for (uint8_t i = 0; i < 10; i++) {
 								if (OAM_SPR_IDX[i] == 0xFF) break;
@@ -260,8 +255,11 @@ void GPU::render(uint32_t clocks) {
 							// palette remapping
 							uint8_t C = (((palette) ? GPU_REG_PALETTE_S1 : GPU_REG_PALETTE_S0) >> (B << 1)) & 0x03;
 
+							// if sprite priority mode, skip write check
+							if (priority && WINDOW_MEMORY[window_pos] == PALETTE[GPU_REG_PALETTE_BG >> 6]);
+							
 							// write new pixel data
-							if (C) WINDOW_MEMORY[x + y * SCREEN_WIDTH] = PALETTE[C];
+							else if (C) WINDOW_MEMORY[window_pos] = PALETTE[C];
 						}
 						}
 						COMPLETED_CLOCKS++;
