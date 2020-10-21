@@ -208,55 +208,55 @@ void GPU::render(uint32_t clocks) {
 							uint8_t index = 0xFF;
 							uint16_t window_pos = (x + y * SCREEN_WIDTH);
 
+							// look through OAM listings
 							for (uint8_t i = 0; i < 10; i++) {
-								if (OAM_SPR_IDX[i] == 0xFF) break;
-								if (OAM_SPR_XPOS[i] <= x && OAM_SPR_XPOS[i] + 8 > x) {
+
+								if (OAM_SPR_IDX[i] == 0xFF) break; // unpopulated entry, end of list
+								if (OAM_SPR_XPOS[i] <= x && OAM_SPR_XPOS[i] + 8 > x) { // valid entry
 									index = OAM_SPR_IDX[i];
+								}
+								else continue; // real entry but not for this position
+
+								uint8_t* SPRT_DATA_ADDR = (uint8_t *)(OAM + index);
+
+								int16_t spr_x = (int16_t) SPRT_DATA_ADDR[1];
+								int16_t spr_y = (int16_t) SPRT_DATA_ADDR[0];
+								uint8_t spr_tile_id = SPRT_DATA_ADDR[2];
+								bool priority = (SPRT_DATA_ADDR[3] >> 7) & 0x01;
+								bool flip_y   = (SPRT_DATA_ADDR[3] >> 6) & 0x01;
+								bool flip_x   = (SPRT_DATA_ADDR[3] >> 5) & 0x01;
+								bool palette  = (SPRT_DATA_ADDR[3] >> 4) & 0x01;
+
+								uint16_t* TILE_ADDR = (uint16_t *)(TILES_SPRITES + spr_tile_id * 16);
+
+								spr_y -= 16; //convert to top
+								spr_x -= 8; //convert to left
+
+								uint16_t spr_nx = x - spr_x;
+								uint16_t spr_ny = y - spr_y;
+
+								// get value of line of pixels
+								uint16_t A = TILE_ADDR[flip_y ? (7 - spr_ny) : spr_ny];
+
+								// flip x if required
+								uint16_t ux = (flip_x ? (7 - spr_nx) : spr_nx);
+
+								// shuffle bits
+								uint8_t B = (((A >> (7 - ux)) & 0x01) + ((A >> (15 - ux) & 0x01) << 1));
+
+								// palette remapping
+								uint8_t C = (((palette) ? GPU_REG_PALETTE_S1 : GPU_REG_PALETTE_S0) >> (B << 1)) & 0x03;
+
+								// if sprite priority mode, skip write check
+								if (priority && (WINDOW_MEMORY[window_pos] == PALETTE[GPU_REG_PALETTE_BG >> 6]));
+								
+								// if not colour 0, write new pixel data
+								else if (B) {
+									WINDOW_MEMORY[window_pos] = PALETTE[C];
 									break;
 								}
 							}
 
-							if (index == 0xFF) { //index can't actually be above 40 so there's no sprite here
-								COMPLETED_CLOCKS++;
-								break;
-							}
-
-							uint8_t* SPRT_DATA_ADDR = (uint8_t *)(OAM + index);
-
-							int16_t spr_x = (int16_t) SPRT_DATA_ADDR[1];
-							int16_t spr_y = (int16_t) SPRT_DATA_ADDR[0];
-							uint8_t spr_tile_id = SPRT_DATA_ADDR[2];
-							bool priority = (SPRT_DATA_ADDR[3] >> 7) & 0x1;
-							bool flip_y   = (SPRT_DATA_ADDR[3] >> 6) & 0x1;
-							bool flip_x   = (SPRT_DATA_ADDR[3] >> 5) & 0x1;
-							bool palette  = (SPRT_DATA_ADDR[3] >> 4) & 0x1;
-
-							uint16_t* TILE_ADDR = (uint16_t *)(TILES_SPRITES + spr_tile_id * 16);
-
-							/* If sprite is on screen, draw it  */
-							spr_y -= 16; //convert to top
-							spr_x -= 8; //convert to left
-
-							uint16_t spr_nx = x - spr_x;
-							uint16_t spr_ny = y - spr_y;
-
-							// get value of line of pixels
-							uint16_t A = TILE_ADDR[flip_y ? (7 - spr_ny) : spr_ny];
-
-							// flip x if required
-							uint16_t ux = (flip_x ? (7 - spr_nx) : spr_nx);
-
-							// shuffle bits
-							uint8_t B = (((A >> (7 - ux)) & 0x01) + ((A >> (15 - ux) & 0x01) << 1));
-
-							// palette remapping
-							uint8_t C = (((palette) ? GPU_REG_PALETTE_S1 : GPU_REG_PALETTE_S0) >> (B << 1)) & 0x03;
-
-							// if sprite priority mode, skip write check
-							if (priority && WINDOW_MEMORY[window_pos] == PALETTE[GPU_REG_PALETTE_BG >> 6]);
-							
-							// write new pixel data
-							else if (C) WINDOW_MEMORY[window_pos] = PALETTE[C];
 						}
 						}
 						COMPLETED_CLOCKS++;
