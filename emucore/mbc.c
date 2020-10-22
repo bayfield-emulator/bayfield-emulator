@@ -1,6 +1,11 @@
 #include "emucore.h"
 #include "mbc.h"
 
+static int constrain_banknum(cpu_mmap_t *mem, int request) {
+    int nbank = mem->rom.image_size / 0x4000;
+    return request % nbank;
+}
+
 enum mbc_type bc_determine_mbc_type_from_header(uint8_t *romdata) {
     switch(romdata[0x0147]) {
     case 0x0:
@@ -76,6 +81,8 @@ void mbc_bankswitch_only_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_v
         if (real_banknum == 0) {
             real_banknum++;
         }
+
+        real_banknum = constrain_banknum(mem, real_banknum);
         mem->rom.mbc_context->rom_bank = real_banknum;
         mem->rom.bankx = mem->rom.rom + (0x4000 * real_banknum);
         return;
@@ -96,6 +103,8 @@ void mbc1_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
         if (mem->rom.mbc_context->mode_sel == 0) {
             real_banknum |= (mem->rom.mbc_context->multi_bits << 5);
         }
+
+        real_banknum = constrain_banknum(mem, real_banknum);
         mem->rom.mbc_context->rom_bank = real_banknum;
         mem->rom.bankx = mem->rom.rom + (0x4000 * real_banknum);
         return;
@@ -106,23 +115,24 @@ void mbc1_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
         if (mem->rom.mbc_context->mode_sel == 1) {
             mem->rom.extram = mem->rom.extram_base + (0x2000 * (write_val & 0x3));
         } else {
-            int real_banknum = ((write_val & 0x3) << 5) | (mem->rom.mbc_context->rom_bank & 0x1f);
+            int real_banknum = constrain_banknum(mem, ((write_val & 0x3) << 5) | (mem->rom.mbc_context->rom_bank & 0x1f));
             mem->rom.mbc_context->rom_bank = real_banknum;
             mem->rom.bankx = mem->rom.rom + (0x4000 * real_banknum);
         }
         return;
     }
 
+    // ROM/RAM mode switch
     if (addr < 0x8000) {
         mem->rom.mbc_context->mode_sel = write_val & 0x1;
         if (write_val & 1) {
             mem->rom.extram = mem->rom.extram_base + (0x2000 * mem->rom.mbc_context->multi_bits);
-            int real_banknum = mem->rom.mbc_context->rom_bank & 0x1f;
+            int real_banknum = constrain_banknum(mem, mem->rom.mbc_context->rom_bank & 0x1f);
             mem->rom.mbc_context->rom_bank = real_banknum;
             mem->rom.bankx = mem->rom.rom + (0x4000 * real_banknum);
         } else {
             mem->rom.extram = mem->rom.extram_base;
-            int real_banknum = ((mem->rom.mbc_context->multi_bits & 0x3) << 5) | (mem->rom.mbc_context->rom_bank & 0x1f);
+            int real_banknum = constrain_banknum(mem, ((mem->rom.mbc_context->multi_bits & 0x3) << 5) | (mem->rom.mbc_context->rom_bank & 0x1f));
             mem->rom.mbc_context->rom_bank = real_banknum;
             mem->rom.bankx = mem->rom.rom + (0x4000 * real_banknum);
         }
@@ -141,6 +151,8 @@ void mbc2_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
         if (real_banknum == 0) {
             real_banknum++;
         }
+
+        real_banknum = constrain_banknum(mem, real_banknum);
         mem->rom.mbc_context->rom_bank = real_banknum;
         mem->rom.bankx = mem->rom.rom + (0x4000 * real_banknum);
         return;
@@ -155,6 +167,8 @@ void mbc3_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
         if (real_banknum == 0) {
             real_banknum++;
         }
+
+        real_banknum = constrain_banknum(mem, real_banknum);
         mem->rom.mbc_context->rom_bank = real_banknum;
         mem->rom.bankx = mem->rom.rom + (0x4000 * real_banknum);
         return;
@@ -199,14 +213,14 @@ void mbc5_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val) {
     }
 
     if (addr < 0x3000) {
-        int bank = (mem->rom.mbc_context->rom_bank & 0x100) | write_val;
+        int bank = constrain_banknum(mem, (mem->rom.mbc_context->rom_bank & 0x100) | write_val);
         mem->rom.mbc_context->rom_bank = bank;
         mem->rom.bankx = mem->rom.rom + (0x4000 * bank);
         return;
     }
 
     if (addr < 0x4000) {
-        int bank = (mem->rom.mbc_context->rom_bank & 0xff) | (write_val & 1);
+        int bank = constrain_banknum(mem, (mem->rom.mbc_context->rom_bank & 0xff) | (write_val & 1));
         mem->rom.mbc_context->rom_bank = bank;
         mem->rom.bankx = mem->rom.rom + (0x4000 * bank);
         return;

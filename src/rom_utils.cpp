@@ -86,24 +86,46 @@ void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
 
 bool load_rom(emu_shared_context_t *ctx, const char *filename) {
     std::fstream stream(filename, std::ios::binary);
-	stream.open(filename, std::ios::in);
+    stream.open(filename, std::ios::in);
 
-	//test file existence
-	if (!stream.is_open()) {
-		std::cerr << "Could not read file" << std::endl;
-		return false;
-	}
+    //test file existence
+    if (!stream.is_open()) {
+        std::cerr << "Could not read file" << std::endl;
+        return false;
+    }
 
     stream.seekg(0, std::ios::end);
     size_t rom_size = stream.tellg();
     stream.seekg(0);
-    uint8_t *full_image = (uint8_t *) malloc(rom_size);
+
+    // Constrain to 16K chunk. This is the size of a ROM bank.
+    size_t rounded = (rom_size & 0x3FFF)? (0x4000 * ((rom_size / 16384) + 1)) : rom_size;
+    // Make sure our buffer is at least 32K because we'll be setting up the bank switchable
+    // region to point there.
+    if (rounded < 0x8000) {
+        rounded = 0x8000;
+    }
+
+    uint8_t *full_image = (uint8_t *) malloc(rounded);
     if (!full_image) {
         std::cerr << "Could not alloc ROM image!" << std::endl;
         return false;
     }
 
+    if (rom_size < rounded) {
+        // Maybe this empty area should be prot_none pages instead of filled with FFs but let's
+        // keep it simple for now
+        memset(full_image + rom_size, 0xFF, rounded - rom_size);
+    }
+
     stream.read((char *)full_image, rom_size);
+    if (stream.gcount() != rom_size) {
+        std::cerr << "Could not read all of ROM image." << std::endl;
+        free(full_image);
+        stream.close();
+        return false;
+    }
+
     stream.close();
 
     //assume file is legitimate ROM
@@ -125,7 +147,7 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
     /* most of this section can be moved into emucore */
     cartridge_t my_rom;
     my_rom.rom = full_image;
-    my_rom.image_size = rom_size;
+    my_rom.image_size = rounded;
     my_rom.bank1 = full_image;
     my_rom.bankx = full_image + 16384;
 
