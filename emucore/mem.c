@@ -83,6 +83,10 @@ uint8_t bc_mmap_getvalue(cpu_mmap_t *mmap, uint16_t addr) {
         return 0xAA;
     }
 
+    if ((addr >= 0xA000 && addr < 0xC000) && mmap->rom.extram_read_handler) {
+        return mmap->rom.extram_read_handler(mmap, addr);
+    }
+
     return *bc_mmap_calc(mmap, addr);
 }
 void bc_mmap_putvalue(cpu_mmap_t *mmap, uint16_t addr, uint8_t value) {

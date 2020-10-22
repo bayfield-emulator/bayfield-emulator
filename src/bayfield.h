@@ -30,6 +30,10 @@ void release_cores(emu_shared_context_t *ctx);
 
 // Sets up the rom part of the cpu's memory map, and MBC stuff if needed
 bool load_rom(emu_shared_context_t *ctx, const char *filename);
+// Load the save file (if the rom's MBC type has one)
+int load_save(emu_shared_context_t *ctx, const char *filename);
+// Saves the save file (if the rom's MBC type has one)
+int dump_save(emu_shared_context_t *ctx, const char *filename);
 
 // FUNCTIONS IN clock.cpp
 

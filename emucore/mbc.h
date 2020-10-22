@@ -22,12 +22,12 @@ typedef struct mbc_context {
     uint16_t enable_ram:1, /* all mbcs */
              mode_sel:1, /* mbc1 only */
     /* used for ram bank num and top two bits of rom select (for MBC1) */
-             multi_bits:4;
+             multi_bits:4,
+             rtc_l_state:2;
     int rtc_s;
     int rtc_m;
     int rtc_h;
     int rtc_d;
-    int rtc_latch;
     uint64_t rtc_epoch;
     uint8_t *extram_base;
 } mbc_context_t;
@@ -41,6 +41,7 @@ void mbc5_control(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
 
 void normal_extram_write(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
 void stupid_extram_write(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
+void rtc_extram_write(cpu_mmap_t *mem, uint16_t addr, uint8_t write_val);
 
 #ifdef __cplusplus
 }

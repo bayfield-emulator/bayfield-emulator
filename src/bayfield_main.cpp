@@ -62,7 +62,10 @@ int main(int argc, char** args) {
         return 1;
     }
 
-    free(rom_path);
+    if (load_save(&cores, rom_path) != 0) {
+        std::cerr << "Couldn't load save, continuing without one" << std::endl;
+    }
+
     bool quit = false;
 
     //set up window
@@ -122,7 +125,12 @@ int main(int argc, char** args) {
 
     cores.stop = 1;
     emulator_thread.join();
-    SDL_Quit();
 
+    if (dump_save(&cores, rom_path) != 0) {
+        std::cerr << "Couldn't dump save" << std::endl;
+    }
+    free(rom_path);
+
+    SDL_Quit();
     return 0;
 }
