@@ -9,6 +9,24 @@
 #include "Window.h"
 #include "bayfield.h"
 
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    static uint32_t from_disk_u32(uint32_t x) {
+        return (((x & 0xff000000) >> 24) | ((x & 0xff0000) >> 8) | ((x & 0xff00) << 8) | ((x & 0xff) << 24));
+    }
+
+    static uint32_t to_disk_u32(uint32_t x) {
+        return (((x & 0xff000000) >> 24) | ((x & 0xff0000) >> 8) | ((x & 0xff00) << 8) | ((x & 0xff) << 24));
+    }
+#else
+    static uint32_t from_disk_u32(uint32_t x) {
+        return x;
+    }
+
+    static uint32_t to_disk_u32(uint32_t x) {
+        return x;
+    }
+#endif
+
 void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
     enum mbc_type icfg_type = bc_determine_mbc_type_from_header(full_image);
     cart->mbc_type = icfg_type;
@@ -82,8 +100,7 @@ void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
 }
 
 bool load_rom(emu_shared_context_t *ctx, const char *filename) {
-    std::fstream stream(filename, std::ios::binary);
-    stream.open(filename, std::ios::in);
+    std::fstream stream(filename, std::ios::in | std::ios::binary);
 
     //test file existence
     if (!stream.is_open()) {
@@ -197,7 +214,7 @@ int load_save(emu_shared_context_t *ctx, const char *filename) {
     stream.seekg(12, std::ios::cur);
     uint32_t real_checksum = hash_header(cart->rom);
 
-    if (real_checksum != ntohl(checksum)) {
+    if (real_checksum != from_disk_u32(checksum)) {
         fprintf(stderr, "save is for wrong rom image: (sav)%x vs (rom)%x\n", checksum, real_checksum);
         free(path);
         return 1;
@@ -230,7 +247,7 @@ int dump_save(emu_shared_context_t *ctx, const char *filename) {
     char *path = (char *)calloc(fn_max, 1);
     snprintf(path, fn_max, "%s.sav", filename);
 
-    uint32_t real_checksum = htonl(hash_header(cart->rom));
+    uint32_t real_checksum = to_disk_u32(hash_header(cart->rom));
     std::fstream stream(path, std::ios::out | std::ios::binary);
     free(path);
 
