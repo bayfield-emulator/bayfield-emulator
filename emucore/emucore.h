@@ -41,6 +41,7 @@ typedef struct cart {
     bc_extram_read_proc_t extram_read_handler;
 
     mbc_context_t *mbc_context;
+    uint32_t extram_real_size;
     uint16_t extram_usable_size;
 
     uint8_t *extram;

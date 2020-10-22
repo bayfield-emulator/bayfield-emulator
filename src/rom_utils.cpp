@@ -9,23 +9,6 @@
 #include "Window.h"
 #include "bayfield.h"
 
-size_t real_ram_size(uint8_t ram_code, uint8_t mbc_type) {
-    switch(ram_code) {
-    case 1:
-        return 0x500;
-    case 2:
-        return 0x2000;
-    case 3:
-        return 0x8000;
-    case 4:
-        return 0x20000;
-    case 5:
-        return 0x10000;
-    default:
-        return 0;
-    }
-}
-
 void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
     enum mbc_type icfg_type = bc_determine_mbc_type_from_header(full_image);
     cart->mbc_type = icfg_type;
@@ -57,31 +40,38 @@ void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
     switch(full_image[0x0149]) {
     case 1:
         cart->extram_usable_size = 0x500;
+        cart->extram_real_size = 0x500;
         cart->extram_base = (uint8_t *)calloc(0x500, sizeof(uint8_t));
         break;
     case 2:
         cart->extram_usable_size = 0x2000;
+        cart->extram_real_size = 0x2000;
         cart->extram_base = (uint8_t *)calloc(0x2000, sizeof(uint8_t));
         break;
     case 3:
         cart->extram_usable_size = 0x2000;
+        cart->extram_real_size = 0x2000 * 4;
         cart->extram_base = (uint8_t *)calloc(0x2000 * 4, sizeof(uint8_t));
         break;
     case 4:
         cart->extram_usable_size = 0x2000;
+        cart->extram_real_size = 0x2000 * 16;
         cart->extram_base = (uint8_t *)calloc(0x2000 * 16, sizeof(uint8_t));
         break;
     case 5:
         cart->extram_usable_size = 0x2000;
+        cart->extram_real_size = 0x2000 * 8;
         cart->extram_base = (uint8_t *)calloc(0x2000 * 8, sizeof(uint8_t));
         break;
     case 0:
         if (icfg_type == MBC_TYPE_2) {
             cart->extram_usable_size = 512;
+            cart->extram_real_size = 512;
             cart->extram_base = (uint8_t *)calloc(512, sizeof(uint8_t));
         } else {
             cart->extram_usable_size = 0;
         }
+        break;
     default:
         cart->extram_usable_size = 0;
         break;
@@ -213,7 +203,7 @@ int load_save(emu_shared_context_t *ctx, const char *filename) {
         return 1;
     }
 
-    size_t ram_size = real_ram_size(cart->rom[0x0149], cart->rom[0x0147]);
+    size_t ram_size = cart->extram_real_size;
     stream.read((char *)(cart->extram_base), ram_size);
 
     if (stream.gcount() != ram_size) {
@@ -251,7 +241,7 @@ int dump_save(emu_shared_context_t *ctx, const char *filename) {
 
     stream.write((const char *)&real_checksum, 4);
     stream.write("BAYFIELDSAVE", 12);
-    stream.write((const char *)(cart->extram_base), real_ram_size(cart->rom[0x0149], cart->rom[0x0147]));
+    stream.write((const char *)(cart->extram_base), cart->extram_real_size);
     stream.close();
     return 0;
 }
