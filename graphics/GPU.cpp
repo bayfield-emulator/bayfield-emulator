@@ -241,7 +241,7 @@ void GPU::render(uint32_t clocks) {
 								uint8_t C = (((palette) ? GPU_REG_PALETTE_S1 : GPU_REG_PALETTE_S0) >> (B << 1)) & 0x03;
 
 								// if sprite priority mode, skip write check
-								if (priority && (WINDOW_MEMORY[window_pos] == PALETTE[GPU_REG_PALETTE_BG >> 6]));
+								if (priority && (WINDOW_MEMORY[window_pos] != PALETTE[GPU_REG_PALETTE_BG & 0x03]));
 								
 								// if not colour 0, write new pixel data
 								else if (B) {
