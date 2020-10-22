@@ -220,6 +220,9 @@ void GPU::render(uint32_t clocks) {
 								bool flip_x   = (SPRT_DATA_ADDR[3] >> 5) & 0x01;
 								bool palette  = (SPRT_DATA_ADDR[3] >> 4) & 0x01;
 
+								// if this is a double height sprite with a y flip, swap upper and lower tiles
+								if (flip_y && (GPU_REG_LCD_CONTROL & SIZE_OBJ)) spr_tile_id += ((y - 8 < spr_y) ? 1 : -1);
+
 								uint16_t* TILE_ADDR = (uint16_t *)(TILES_SPRITES + spr_tile_id * 16);
 
 								spr_y -= 16; //convert to top
