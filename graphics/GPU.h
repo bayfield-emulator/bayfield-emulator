@@ -4,21 +4,18 @@ NICK
 2019
 */
 
+#ifndef GB_GPU_H
+#define GB_GPU_H
+
 #include <cstdint>	//standard number formats
 #include <string.h>	//memset
 #include <iostream> //malloc
 
-#include <iomanip>
-
-#define BUFFER_W_H 			0x20
-#define TILE_SIZE 			0x10
 #define KB 					0x400
-#define SCREEN_OFF_COLOUR 	0xFFDEDEDE
+#define SCREEN_OFF_COLOUR 	0x94
 
-#define OAM_DELAY 		80
-#define TRANSFER_DELAY 	172
-#define H_BLANK_DELAY 	204
-#define V_BLANK_DELAY 	4560
+#define OAM_DELAY 			80
+#define LINE_CLOCK_WIDTH	456
 
 /* LCDC BITS */
 #define ENABLE_LCD_DISPLAY 		0x80 // Display toggle
@@ -29,13 +26,6 @@ NICK
 #define SIZE_OBJ 				0x04 // Sprite mode (8x8 or 8x16)
 #define ENABLE_OBJ 				0x02 // Sprite toggle
 #define ENABLE_BG_WIN_DISPLAY 	0x01 // Combined background & window toggle
-
-/* TODO: 
-	BIT 6 - Might be required
-	BIT 4 - Might be required
-	BIT 3 - Might be required
-	BIT 2 - Unlikely to be required
-*/
 
 /* LCD STATUS BITS */
 #define INTR_LYC_EQ_LY 	0x40 // LY_CMP register check toggle
@@ -54,12 +44,6 @@ NICK
 #define SCREEN_WIDTH	160
 #define SCREEN_HEIGHT	144
 
-/* TODO:
-	ALL BITS
-*/
-
-#ifndef GB_GPU_H
-#define GB_GPU_H
 
 // The type of an interrupt handler function pointer
 typedef void (*gpu_interrupt_handler_t)(void *);
@@ -89,11 +73,6 @@ class GPU {
 		uint8_t* WINDOW_MAP;		// Start of window map
 		uint32_t* OAM; 				// Start of OAM (sprite metadata)
 
-		/* BUFFERS */
-		uint32_t* BG_BUFFER;
-		uint32_t* WINDOW_BUFFER;
-		uint32_t* SPRITE_BUFFER;
-
 		/* SDL_WINDOW RENDER DESTINATION */
 		uint32_t* WINDOW_MEMORY;
 
@@ -102,13 +81,14 @@ class GPU {
 
 		/* OAM SPRITE LINE DATA */
 		uint8_t OAM_SPR_IDX[10] = {};
-		uint8_t OAM_SPR_XPOS[10] = {};
+		int16_t OAM_SPR_XPOS[10] = {};
 
 		/* POINTER TO INTERRUPT ROUTINES */
 		gpu_interrupt_handler_t F_INTR_LYC;
 		gpu_interrupt_handler_t F_INTR_OAM;
 		gpu_interrupt_handler_t F_INTR_HBL;
 		gpu_interrupt_handler_t F_INTR_VBL;
+
 		/* Pass this to interrupt functions */
 		void *INTR_FUNC_CONTEXT = 0;
 

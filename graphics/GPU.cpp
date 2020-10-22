@@ -17,9 +17,6 @@ void GPU::clear() {
 // constructor
 GPU::GPU() {
 	VRAM = (uint8_t *) malloc(sizeof(uint8_t) * 8 * KB);
-	BG_BUFFER = (uint32_t *) malloc(sizeof(uint32_t) * 256 * 256);
-	WINDOW_BUFFER = (uint32_t *) malloc(sizeof(uint32_t) * 256 * 256);
-	SPRITE_BUFFER = (uint32_t *) malloc(sizeof(uint32_t) * 256 * 256);
 	TILES_BG = VRAM;
 	TILES_SPRITES = VRAM;
 	BG_MAP = VRAM + (6 * KB);
@@ -33,9 +30,6 @@ GPU::GPU() {
 // destructor
 GPU::~GPU() {
 	free(VRAM);
-	free(BG_BUFFER); 
-	free(WINDOW_BUFFER); 
-	free(SPRITE_BUFFER); 
 	free(OAM);
 }
 
@@ -44,8 +38,7 @@ void GPU::init(uint32_t* ptr_to_win_memory) {
 	WINDOW_MEMORY = ptr_to_win_memory;
 }
 
-//simplified single call to draw
-//calling like this offers guarantees about order, important for sprites layer
+//todo: remove references
 void GPU::redraw() {}
 
 //assemble all buffers and produce final frame
@@ -75,11 +68,11 @@ void GPU::render(uint32_t clocks) {
 					if (F_INTR_VBL != NULL) F_INTR_VBL(INTR_FUNC_CONTEXT);  /* V_BLANK INTERRUPT */
 				}
 				COMPLETED_CLOCKS++;
-				if (!((COMPLETED_CLOCKS + POSITION) % 456)) GPU_REG_LCDCUR_Y++;
+				if (!((COMPLETED_CLOCKS + POSITION) % LINE_CLOCK_WIDTH)) GPU_REG_LCDCUR_Y++;
 				if (GPU_REG_LCDCUR_Y == 154) GPU_REG_LCDCUR_Y = 0;
 			}
 			else {
-				switch ((COMPLETED_CLOCKS + POSITION) % 456) {
+				switch ((COMPLETED_CLOCKS + POSITION) % LINE_CLOCK_WIDTH) {
 					case 0: //before OAM read, check for interrupt on this line
 						if ((GPU_REG_LCD_STATUS & INTR_LYC_EQ_LY) && (GPU_REG_LY_CMP == GPU_REG_LCDCUR_Y)) {
 							if (F_INTR_LYC != NULL) F_INTR_LYC(INTR_FUNC_CONTEXT); /* LY_CMP INTERRUPT */
@@ -89,7 +82,7 @@ void GPU::render(uint32_t clocks) {
 						break;
 					case 1: //OAM READ
 						memset(OAM_SPR_IDX, 0xFF, (sizeof(uint8_t) * 10));
-						memset(OAM_SPR_XPOS, 0xFF, (sizeof(uint8_t) * 10));
+						memset(OAM_SPR_XPOS, 0xFF, (sizeof(int16_t) * 10));
 
 						{
 
@@ -101,7 +94,7 @@ void GPU::render(uint32_t clocks) {
 							SPRT_DATA_ADDR = (uint8_t *)(OAM + i);
 
 							int16_t spr_y = ((int16_t) SPRT_DATA_ADDR[0]) - 16;
-							uint8_t spr_x = SPRT_DATA_ADDR[1] - 8;
+							int16_t spr_x = ((int16_t) SPRT_DATA_ADDR[1]) - 8;
 
 							if ((spr_y <= GPU_REG_LCDCUR_Y) && (spr_y + ((GPU_REG_LCD_CONTROL & SIZE_OBJ) ? 16 : 8) > GPU_REG_LCDCUR_Y)) { //if sprite appears on this line
 								OAM_SPR_IDX[pos] = i; //add tile ID
@@ -122,7 +115,7 @@ void GPU::render(uint32_t clocks) {
 
 						{
 
-						uint8_t x = ((COMPLETED_CLOCKS + POSITION) % 456) - 80;
+						uint8_t x = ((COMPLETED_CLOCKS + POSITION) % LINE_CLOCK_WIDTH) - OAM_DELAY;
 						uint8_t y = GPU_REG_LCDCUR_Y;
 
 						// calculate horizontal shift
@@ -263,12 +256,13 @@ void GPU::render(uint32_t clocks) {
 						break;
 					case 240 ... 251: //Wasted pixel transfer clocks (emulation doesn't need them but real unit does)
 						COMPLETED_CLOCKS++;
-						break; 
-					case 252 ... 454: //H-BLANK
+						break;
+					case 252: //ENTER H-BLANK
 						GPU_REG_LCD_STATUS = ((GPU_REG_LCD_STATUS & ~FLAG_MODE) | MODE_H_BLANK); //set h-blank mode
-						if (((COMPLETED_CLOCKS + POSITION) % 456) == 252 && (GPU_REG_LCD_STATUS & INTR_H_BLANK)) {
-							if (F_INTR_HBL != NULL) F_INTR_HBL(INTR_FUNC_CONTEXT);  /* H-BLANK INTERRUPT */
+						if (GPU_REG_LCD_STATUS & INTR_H_BLANK) {
+							if (F_INTR_HBL != nullptr) F_INTR_HBL(INTR_FUNC_CONTEXT);  /* H-BLANK INTERRUPT */
 						}
+					case 253 ... 454: //H-BLANK
 						COMPLETED_CLOCKS++;
 						break;
 					case 455: //LAST COLUMN OF H-BLANK
@@ -382,9 +376,3 @@ void GPU::set_intr_H_BLANK(gpu_interrupt_handler_t intr){
 void GPU::set_intr_V_BLANK(gpu_interrupt_handler_t intr){
 	F_INTR_VBL = intr;
 }
-
-/* TODO */
-// Check default register values -> this would normally be set by the system before a program begins
-// Sprites disappearing near top of screen?
-// Sprite draw ordering (lower x priority)
-// Sprite priority flag
