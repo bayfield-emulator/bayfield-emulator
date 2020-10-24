@@ -165,6 +165,7 @@ void init_cores(emu_shared_context_t *ctx) {
 
     sound_init(&ctx->sound_controller);
     sound_install_regs(&ctx->sound_controller, (void *)&(ctx->cpu->mem), (snd_mmio_add_observer_t)&bc_mmap_add_mmio_observer);
+    sound_set_volume(&ctx->sound_controller, 8000);
     sound_set_output(&ctx->sound_controller, AUDIO_SAMPLERATE, (sound_feed_buffer_t)&feed_audio, (void *)ctx);
 }
 

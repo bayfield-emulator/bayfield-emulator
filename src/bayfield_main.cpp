@@ -41,7 +41,7 @@ SDL_AudioDeviceID init_audio_queue() {
 
     SDL_memset(&want, 0, sizeof(want)); /* or SDL_zero(want) */
     want.freq = AUDIO_SAMPLERATE;
-    want.format = AUDIO_U16SYS;
+    want.format = AUDIO_S16SYS;
     want.channels = 2;
     want.samples = 2048;
     want.callback = NULL;
