@@ -23,6 +23,8 @@ extern "C" {
 #define SOUND_VE_GETVOL(stt) ((stt)->ve_cur_volume / 15.0)
 
 void sound_square_install_regs(sound_ctlr_t *state, void *target, snd_mmio_add_observer_t reg_func);
+void sound_square_onsweep(sound_ctlr_t *state);
+
 void sound_square_onclock_ch1(sound_ctlr_t *state, int ncyc);
 int sound_square_getoutput_ch1(sound_ctlr_t *state);
 void sound_square_onclock_ch2(sound_ctlr_t *state, int ncyc);

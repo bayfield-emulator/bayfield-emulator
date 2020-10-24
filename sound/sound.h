@@ -21,6 +21,12 @@ typedef struct {
 } sound_ve_t;
 
 typedef struct {
+    float charge;
+    float rate;
+} sound_filter_t;
+
+typedef struct {
+    int16_t reference_volume;
     sound_feed_buffer_t feed_callback;
     void *feed_context;
 
@@ -59,6 +65,14 @@ typedef struct {
     int square1_timebase;
     int square1_duty_shape;
     sound_ve_t s1_envelope;
+
+    uint32_t square1_swp_enabled: 1;
+    uint32_t square1_swp_timebase: 3;
+    uint32_t square1_swp_direction: 1;
+    uint32_t square1_swp_shift: 3;
+
+    int square1_swp_tick;
+    int square1_swp_sha;
 
     int square1_tick;
     int square1_duty;
@@ -105,6 +119,9 @@ typedef struct {
     sound_ve_t noise_envelope;
     // time until advancing lfsr (0-noise_timebase)
     int noise_tick;
+
+    sound_filter_t cap_l;
+    sound_filter_t cap_r;
 } sound_ctlr_t;
 
 // emucore compatibility
@@ -116,6 +133,7 @@ typedef void (*snd_mmio_add_observer_t)(void *, uint16_t, snd_mmio_write_t, snd_
 
 void sound_init(sound_ctlr_t *state);
 void sound_install_regs(sound_ctlr_t *state, void *target, snd_mmio_add_observer_t reg_func);
+void sound_set_volume(sound_ctlr_t *state, int16_t volume);
 void sound_set_output(sound_ctlr_t *state, int samples_per_second, sound_feed_buffer_t callback, void *context);
 void sound_run_controller(sound_ctlr_t *state, int ncyc);
 

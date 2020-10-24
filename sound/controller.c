@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "sound.h"
 #include "sound_internal.h"
@@ -7,8 +8,8 @@
 //==----------------------------------------------------------------
 
 static uint8_t write_ff24(void *gb, sound_ctlr_t *state, uint16_t addr, uint8_t val) {
-    state -> volume_left = (val & 0xF0) >> 4;
-    state -> volume_right = (val & 0xF0);
+    state -> volume_left = (val & 0x70) >> 4;
+    state -> volume_right = (val & 0x7);
 
     snd_debug(SND_DEBUG_CONTROLLER, "vol: L:%d R:%d", state->volume_left, state->volume_right);
 
@@ -67,7 +68,7 @@ static void do_volume_env(sound_ctlr_t *state) {
     sound_ve_onclock(&state->noise_envelope, 1);
 }
 
-static void sequencer(sound_ctlr_t *state) {
+static void do_sequencer(sound_ctlr_t *state) {
     int step = state->step & 0x7;
     switch(state->step) {
     case 0:
@@ -75,14 +76,14 @@ static void sequencer(sound_ctlr_t *state) {
         break;
     case 2:
         do_length(state);
-        // sweep
+        sound_square_onsweep(state);
         break;
     case 4:
         do_length(state);
         break;
     case 6:
         do_length(state);
-        // sweep
+        sound_square_onsweep(state);
         break;
     case 7:
         do_volume_env(state);
@@ -92,6 +93,12 @@ static void sequencer(sound_ctlr_t *state) {
     }
 
     state->step = step + 1;
+}
+
+static int16_t do_attenuate(sound_filter_t *f, int16_t sin) {
+    int16_t sout = sin - (INT16_MAX * f->charge);
+    f->charge = ((sin - sout) / INT16_MAX) * f->rate;
+    return sout;
 }
 
 static void do_output(sound_ctlr_t *state, int16_t reference_volume) {
@@ -107,14 +114,14 @@ static void do_output(sound_ctlr_t *state, int16_t reference_volume) {
         }
 
         if ((state->status_reg & 0x4) && state->wave_play) {
-            int samp = state->wave_pram[state->wave_pread >> 1];
+            uint32_t samp = state->wave_pram[state->wave_pread >> 1];
             if (state->wave_pread & 1) {
                 samp = samp & 0xF;
             } else {
                 samp = (samp >> 4) & 0xF;
             }
-            int rv = samp >> state->wave_volume;
-            int16_t ns = (rv / 15.0) * reference_volume;
+            uint32_t rv = samp >> state->wave_volume;
+            int16_t ns = ((float)(rv * 2 - 15) / 15.0) * reference_volume;
             sample_r += (state->pan_reg & 0x04)? ns : 0;
             sample_l += (state->pan_reg & 0x40)? ns : 0;
         }
@@ -134,8 +141,8 @@ static void do_output(sound_ctlr_t *state, int16_t reference_volume) {
         }
     }
 
-    state->prod_buffer[state->prod_count++] = (int16_t)(sample_l / 4);
-    state->prod_buffer[state->prod_count++] = (int16_t)(sample_r / 4);
+    state->prod_buffer[state->prod_count++] = do_attenuate(&state->cap_l, (int16_t)(sample_l / 4) * (state->volume_left / 7.0));
+    state->prod_buffer[state->prod_count++] = do_attenuate(&state->cap_r, (int16_t)(sample_r / 4) * (state->volume_right / 7.0));
 
     if (state->prod_count == state->prod_bufsize) {
         state->feed_callback(state->prod_buffer, state->prod_bufsize * sizeof(int16_t), state->feed_context);
@@ -144,26 +151,19 @@ static void do_output(sound_ctlr_t *state, int16_t reference_volume) {
 }
 
 void sound_init(sound_ctlr_t *state) {
+    memset(state, 0, sizeof(sound_ctlr_t));
+
     state->prod_buffer = calloc(2048, sizeof(int16_t));
     state->prod_bufsize = 2048;
     state->prod_count = 0;
-
-    memset(state->wave_pram, 0, 16);
 }
 
 void sound_run_controller(sound_ctlr_t *state, int ncyc) {
     uint32_t clk = state->clocks + ncyc;
     uint32_t pt = state->prod_tick + ncyc;
 
-    if (pt >= state->prod_tick_base) {
-        do_output(state, 10000);
-        pt -= state->prod_tick_base;
-    }
-
-    state->prod_tick = pt;
-
     if (clk >= 2048) {
-        sequencer(state);
+        do_sequencer(state);
         state->clocks = clk - 2048;
     } else {
         state->clocks = clk;
@@ -173,7 +173,11 @@ void sound_run_controller(sound_ctlr_t *state, int ncyc) {
         sound_noise_onclock(state, ncyc);
     }
     if (state->status_reg & 0x04) {
-        sound_wave_onclock(state, ncyc);
+        // Workaround because the wave channel requires higher precision than
+        // we can provide (per https://gbdev.gg8.se/wiki/articles/Gameboy_sound_hardware#Wave_Channel ,
+        // works out to 2 mhz)
+        // So double up every cycle and hope no software uses very high frequencies.
+        sound_wave_onclock(state, ncyc * 2);
     }
     if (state->status_reg & 0x02) {
         sound_square_onclock_ch2(state, ncyc);
@@ -181,6 +185,13 @@ void sound_run_controller(sound_ctlr_t *state, int ncyc) {
     if (state->status_reg & 0x01) {
         sound_square_onclock_ch1(state, ncyc);
     }
+
+    if (pt >= state->prod_tick_base) {
+        do_output(state, state->reference_volume);
+        pt -= state->prod_tick_base;
+    }
+
+    state->prod_tick = pt;
 }
 
 void sound_install_regs(sound_ctlr_t *state, void *target, snd_mmio_add_observer_t reg_func) {
@@ -193,11 +204,19 @@ void sound_install_regs(sound_ctlr_t *state, void *target, snd_mmio_add_observer
     sound_wave_install_regs(state, target, reg_func);
 }
 
+void sound_set_volume(sound_ctlr_t *state, int16_t volume) {
+    state->reference_volume = volume;
+    snd_debug(SND_DEBUG_CONTROLLER, "volume: %d", (int)volume);
+}
+
 void sound_set_output(sound_ctlr_t *state, int samples_per_second, sound_feed_buffer_t callback, void *context) {
     state->feed_callback = callback;
     state->feed_context = context;
     state->prod_tick_base = (1048576 / samples_per_second);
     state->prod_tick = 0;
+
+    state->cap_l.rate = powf(0.999958f, (float)4194304 / samples_per_second);
+    state->cap_r.rate = powf(0.999958f, (float)4194304 / samples_per_second);
 
     snd_debug(SND_DEBUG_CONTROLLER, "tickbase: %d", state->prod_tick_base);
 }

@@ -30,6 +30,7 @@ static uint8_t write_ff23(void *gb, sound_ctlr_t *state, uint16_t addr, uint8_t 
     if (val & 0x80) {
         state->noise_lctr = 64;
         state->noise_reg = 0x7FFF;
+        state->noise_tick = state->noise_timebase;
         state->status_reg |= 0x08;
         sound_ve_oninit(&state->noise_envelope);
     }
@@ -57,10 +58,10 @@ static void update_noise_register(sound_ctlr_t *state) {
 // public
 
 void sound_noise_onclock(sound_ctlr_t *state, int ncyc) {
-    state->noise_tick += ncyc;
+    state->noise_tick -= ncyc;
 
-    if (state->noise_tick > state->noise_timebase) {
-        state->noise_tick -= state->noise_timebase;
+    if (state->noise_tick <= 0) {
+        state->noise_tick = state->noise_timebase + state->noise_tick;
         update_noise_register(state);
     }
 }
