@@ -1,9 +1,9 @@
-# Bayfield: A Gameboy Emulator
-## Originally a product of CSC 350
+# Bayfield
+## A mostly complete Gameboy emulator
 
-Originally written for a Computer Architecture course, this is now a mostly complete Gameboy emulator.
+Originally written for a Computer Architecture course. Now a freestanding project.
 
-Quick navigation:
+##### Quick navigation:
 - **[How to build](#building)**
   - [Windows](#windows)
   - [macOS](#macos)
@@ -11,9 +11,13 @@ Quick navigation:
 - **[How to run](#running)**
 - **[Playing games](#playing)**
 
+---
+
 ![Emulator running normally](./assets/bayfield_demo_tetris.gif "Playing Tetris")
 
-*Working as intended.*
+*Tetris' main menu demo loop working as intended.*
+
+---
 
 ## RUNNING
 ### Prerequisites
@@ -83,6 +87,7 @@ All builds require SDL2 development libraries:
 *Optional:*
 
 3. `make pack` to create the macOS `.app` and release zip file.
+
 *Note that release builds use a trick involving renaming a dylib to force static linking, so they will not match your build exactly. It's a hack and it's not recommended to do it this way for personal use.*
 
 #### Linux
