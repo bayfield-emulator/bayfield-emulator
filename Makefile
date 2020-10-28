@@ -4,6 +4,8 @@ CXXFLAGS += -std=c++11 -O2 -Wall #-DDEBUG
 
 OUTPUT = Bayfield
 
+ARCH = $(shell uname -m | tr a-z A-Z)
+
 ifeq ($(OS),Windows_NT)
 	OUTPUT := $(OUTPUT).exe
 	LDFLAGS += -lmingw32 -lSDL2main -lSDL2.dll -lpthread -luser32 -lgdi32 -ldxguid -mwindows
@@ -53,10 +55,10 @@ clean:
 
 pack:
 ifeq ($(OS),Windows_NT)
-	zip -r9y "WINDOWS x86-64.zip" Bayfield.exe libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll SDL2.dll assets\\eframe.bmp
+	zip -r9y "WINDOWS $(ARCH).zip" Bayfield.exe libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll SDL2.dll assets\\eframe.bmp
 else
 ifeq ($(UNAME_S),Linux)
-	zip -r9y "LINUX x86-64.zip" Bayfield assets/eframe.bmp
+	zip -r9y "LINUX $(ARCH).zip" Bayfield assets/eframe.bmp
 endif
 ifeq ($(UNAME_S),Darwin)
 	mkdir -p Bayfield.app/Contents/MacOS Bayfield.app/Contents/Resources/assets
@@ -66,6 +68,6 @@ ifeq ($(UNAME_S),Darwin)
 	ln -s ../Resources/assets Bayfield.app/Contents/MacOS/assets
 	cp meta/Info.plist Bayfield.app/Contents
 	codesign -s '-' Bayfield.app
-	zip -r9y "MACOS x86-64.zip" Bayfield.app
+	zip -r9y "MACOS $(ARCH).zip" Bayfield.app
 endif
 endif
