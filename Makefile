@@ -1,12 +1,16 @@
+# Makefile for Bayfield Emulator
+
 BAYFIELDGB_SRC = src/bayfield_main.cpp src/emu_thread.cpp src/rom_utils.cpp src/clock.cpp src/joypad.cpp
+WIN_REQUIRED_DLLS = libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll SDL2.dll
 STATIC_LIBS = graphics/libgfx.a emucore/libemucore.a
-CXXFLAGS += -std=c++11 -O2 -Wall #-DDEBUG
+CXXFLAGS += -std=c++11 -O2 -Wall
 
 OUTPUT = Bayfield
 
 ARCH = $(shell uname -m | tr a-z A-Z)
 
 ifeq ($(OS),Windows_NT)
+	MINGW_BIN_DIR = /mingw64/bin
 	OUTPUT := $(OUTPUT).exe
 	LDFLAGS += -lmingw32 -lSDL2main -lSDL2.dll -lpthread -luser32 -lgdi32 -ldxguid -mwindows
 	BAYFIELDGB_SRC += src/file_picker_windows.cpp
@@ -55,10 +59,11 @@ clean:
 
 pack:
 ifeq ($(OS),Windows_NT)
-	zip -r9y "WINDOWS $(ARCH).zip" Bayfield.exe libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll SDL2.dll assets\\eframe.bmp
+	@printf "$(shell /usr/bin/bash -c "FILE_LIST=\"$(WIN_REQUIRED_DLLS)\"; for file in \$$FILE_LIST; do if [[ -f \"$(MINGW_BIN_DIR)/\$$file\" ]]; then cp $(MINGW_BIN_DIR)/\$$file \$$file; else printf \"COULD NOT LOCATE '\$$file', ENSURE DEPENDANCIES ARE SATISFIED.\\n\"; fi; done")\n"
+	@zip -r9y "WINDOWS $(ARCH).zip" $(OUTPUT) $(WIN_REQUIRED_DLLS) assets\\eframe.bmp
 else
 ifeq ($(UNAME_S),Linux)
-	zip -r9y "LINUX $(ARCH).zip" Bayfield assets/eframe.bmp
+	@zip -r9y "LINUX $(ARCH).zip" $(OUTPUT) assets/eframe.bmp
 endif
 ifeq ($(UNAME_S),Darwin)
 	mkdir -p Bayfield.app/Contents/MacOS Bayfield.app/Contents/Resources/assets
