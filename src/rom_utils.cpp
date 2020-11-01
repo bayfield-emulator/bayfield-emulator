@@ -99,6 +99,10 @@ void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
     cart->extram = cart->extram_base;
 }
 
+bool validate_rom(void* image) {
+    return true;
+}
+
 bool load_rom(emu_shared_context_t *ctx, const char *filename) {
     std::fstream stream(filename, std::ios::in | std::ios::binary);
 
@@ -142,21 +146,23 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
 
     stream.close();
 
-    //assume file is legitimate ROM
+    if (!validate_rom((void *) full_image)) {
+        std::cerr << "ROM failed validation" << std::endl;
+        free(full_image);
+        return false;
+    }
+
     /*Title [16 bytes long from 0x0134]*/
     /*ROM Type [single byte at 0x0147]*/
     /*RAM Size [single byte at 0x0149]*/
     const char *title = (const char *)(full_image + 0x0134);
     int mbc = full_image[0x0147];
     int ram_size = full_image[0x0149];
+
     for (int i = 0; i < 16; i++) {
-        if (title[i] & 0x80) {
-            ctx->rom_title[i] = '\0';
-            break;
-        }
         ctx->rom_title[i] = title[i];
+        if (!title[i]) break;
     }
-    ctx->rom_title[15] = '\0';
 
     /* most of this section can be moved into emucore */
     cartridge_t my_rom;

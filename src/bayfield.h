@@ -7,7 +7,7 @@
 #include "GPU.h"
 
 typedef struct {
-    char rom_title[16];
+    char rom_title[17];
     bc_cpu_t *cpu;
     GPU *gpu;
     joyp_t joypad;

@@ -1,10 +1,14 @@
+/* Bayfield Main */
+
 #include <iostream>
 #include <fstream>
 #include <thread>
-#include <SDL2/SDL.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
+
+#include <SDL2/SDL.h>
+
 #include "emucore.h"
 #include "mbc.h"
 #include "GPU.h"
@@ -35,9 +39,23 @@ SDL_Surface *copy_frame(const char *executable_path) {
     return ret;
 }
 
+void show_simple_error(std::string title, std::string message) {
+    title.insert(0, "BAYFIELD: ");
+    if (SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title.c_str(), message.c_str(), nullptr)) {
+        // if message box could not be shown, last ditch console print
+        std::cerr << message << std::endl;
+    }
+    return;
+}
+
 int main(int argc, char** args) {
+
+    if (SDL_Init(SDL_INIT_VIDEO)) { // SDL could not initialize
+        show_simple_error("SDL INIT FAILURE", "Could not initialize required SDL subsystems.");
+        return 1;
+    }
+
     char *rom_path = NULL;
-    SDL_Init(SDL_INIT_VIDEO);
 
     // Check if the argv provided path is a real file first. OS X will sometimes
     // add args if it was a UI launch.
@@ -45,12 +63,13 @@ int main(int argc, char** args) {
         if (access(args[1], F_OK) == 0) {
             rom_path = strdup(args[1]);
         } else {
-            std::cerr << "The specified file does not exist." << std::endl;
+            show_simple_error("FILE NOT FOUND", "The specified ROM file does not exist.");
+            return 1;
         }
     }
 
     if (!rom_path && fp_get_user_path(&rom_path)) {
-        std::cerr << "Please provide a file name" << std::endl;
+        show_simple_error("NO FILE PROVIDED", "Please provide a ROM file's name.");
         return 1;
     }
 
@@ -58,12 +77,12 @@ int main(int argc, char** args) {
     memset(&cores, 0, sizeof(emu_shared_context_t));
     init_cores(&cores);
     if (!load_rom(&cores, rom_path)) {
-        std::cerr << "Couldn't load ROM!" << std::endl;
+        show_simple_error("ROM LOAD FAILURE", "Couldn't load ROM.");
         return 1;
     }
 
     if (load_save(&cores, rom_path) != 0) {
-        std::cerr << "Couldn't load save, continuing without one" << std::endl;
+        std::cerr << "Couldn't load save, continuing without one." << std::endl;
     }
 
     bool quit = false;
@@ -105,17 +124,16 @@ int main(int argc, char** args) {
 
         //Handle events on queue
         if (!SDL_PollEvent(&e)) {
-            usleep(1000);
+            usleep(100);
             continue;
         }
 
-        //User requests quit
         switch(e.type) {
-        case SDL_KEYDOWN:
-        case SDL_KEYUP:
+        case SDL_KEYDOWN: // key press
+        case SDL_KEYUP: // key release
             joyp_poll(cores.cpu, &cores.joypad, &e);
             break;
-        case SDL_QUIT:
+        case SDL_QUIT: // main window sent close command
             quit = true;
             break;
         default:
@@ -127,7 +145,7 @@ int main(int argc, char** args) {
     emulator_thread.join();
 
     if (dump_save(&cores, rom_path) != 0) {
-        std::cerr << "Couldn't dump save" << std::endl;
+        std::cerr << "Couldn't dump save." << std::endl;
     }
     free(rom_path);
 
