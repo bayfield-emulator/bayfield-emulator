@@ -95,8 +95,16 @@ class GPU {
 		/* FUNCTIONS */ 
 		void clear(); // Write value to display to 'turn it off'
 
-		// const uint32_t PALETTE[4] = {0xFFFFFFFF, 0xFFB0B0B0, 0xFF686868, 0xFF000000}; //b&w
-		const uint32_t PALETTE[4] = {0xFF879457, 0xFF547659, 0xFF3B584C, 0xFF223A32}; //awful... err... authentic green
+		uint32_t PALETTE[4];
+
+									 /* LIGHTEST								DARKEST */
+		const uint32_t PALETTE_GR[4] = {0xFF879457, 0xFF547659, 0xFF3B584C, 0xFF223A32}; //authentic green
+		const uint32_t PALETTE_BW[4] = {0xFFFFFFFF, 0xFFB0B0B0, 0xFF686868, 0xFF000000}; //b&w
+		const uint32_t PALETTE_HP[4] = {0xFFF4D58D, 0xFF8D0801, 0xFF708D81, 0xFF001427}; //hope
+		const uint32_t PALETTE_MN[4] = {0xFF544C4E, 0xFF31363D, 0xFF2A2E34, 0xFF0B0C0C}; //midnight
+
+		static const int PALETTE_COUNT = 4;
+		const uint32_t* const ALL_PALETTES[PALETTE_COUNT] = {PALETTE_GR, PALETTE_BW, PALETTE_HP, PALETTE_MN};
 
 	public:
 
@@ -126,6 +134,8 @@ class GPU {
 
 		/* Set bits in registers, where permitted */
 		void set_FF(uint8_t reg_no, uint8_t value);
+
+		void choose_palette(int mode);
 
 		/* Set function to call when respective interrupt is triggered */
 		void set_intr_LYC(gpu_interrupt_handler_t intr);

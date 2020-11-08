@@ -25,6 +25,7 @@ GPU::GPU() {
 	memset(BG_MAP, 0xFF, (sizeof(uint8_t) * 32 * 32));
 	memset(WINDOW_MAP, 0xFF, (sizeof(uint8_t) * 32 * 32));
 	memset(OAM, 0x00, (sizeof(uint32_t) * 40));
+	memcpy(PALETTE, PALETTE_GR, (sizeof(uint32_t) * 4));
 }
 
 // destructor
@@ -358,6 +359,11 @@ void GPU::set_FF(uint8_t reg_no, uint8_t value) {
 		default:
 			return;
 	}
+}
+
+void GPU::choose_palette(int mode) {
+	mode = ((mode < 0 || mode > PALETTE_COUNT - 1) ? 0 : mode);
+	memcpy(PALETTE, ALL_PALETTES[mode], (sizeof(uint32_t) * 4));
 }
 
 void GPU::set_intr_context(void *ctx){

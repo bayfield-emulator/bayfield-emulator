@@ -17,8 +17,6 @@
 #include "joypad.hpp"
 #include "file_picker.h"
 
-#define SCALE 3
-
 SDL_Surface *copy_frame(const char *executable_path) {
     const char *frame_rel = "assets/eframe.bmp";
     SDL_Surface *ret;
@@ -50,6 +48,12 @@ void show_simple_error(std::string title, std::string message) {
 
 int main(int argc, char** args) {
 
+    int PROGRAM_SCALE = 3;
+    bool DRAW_FRAME = true;
+    int GPU_P = 0;
+
+#define GPU_MAX_PALETTE 1
+
     if (SDL_Init(SDL_INIT_VIDEO)) { // SDL could not initialize
         show_simple_error("SDL INIT FAILURE", "Could not initialize required SDL subsystems.");
         return 1;
@@ -57,14 +61,42 @@ int main(int argc, char** args) {
 
     char *rom_path = NULL;
 
-    // Check if the argv provided path is a real file first. OS X will sometimes
-    // add args if it was a UI launch.
-    if (argc > 1) {
-        if (access(args[1], F_OK) == 0) {
-            rom_path = strdup(args[1]);
-        } else {
-            show_simple_error("FILE NOT FOUND", "The specified ROM file does not exist.");
-            return 1;
+    // args parsing
+    for (int i = 1; i < argc; i++) {
+        if (args[i][0] == '-') {
+            switch (args[i][1]) {
+                case 'v': //version
+                    std::cout << "BAYFIELD EMULATOR v1.2.0" << std::endl;
+                    return 0;
+                case 's': //scale
+                    if (i + 1 < argc) {
+                        int val = atoi(args[i+1]);
+                        PROGRAM_SCALE = ((val < 1) ? PROGRAM_SCALE : val);
+                        i++;
+                    }
+                    break;
+                case 'p': //palette
+                    if (i + 1 < argc) {
+                        GPU_P = atoi(args[i+1]);
+                        i++;
+                    }
+                    break;
+                case 'f': //border
+                    DRAW_FRAME = false;
+                    break;
+            }
+        }
+        else if (args[i][0] == '?') {
+            std::cout << "HELP MESSAGE HERE" << std::endl;
+            return 0;
+        }
+        else {
+            if (access(args[i], F_OK) == 0) {
+                rom_path = strdup(args[i]);
+            } else {
+                show_simple_error("FILE NOT FOUND", "The specified ROM file does not exist.");
+                return 1;
+            }
         }
     }
 
@@ -85,10 +117,23 @@ int main(int argc, char** args) {
         std::cerr << "Couldn't load save, continuing without one." << std::endl;
     }
 
+    // global quit flag
     bool quit = false;
 
+    // windows size set depending on if frame is drawn or not
+    int W_WIDTH, W_HEIGHT;
+    if (DRAW_FRAME) {
+        W_WIDTH = 256;
+        W_HEIGHT = 212;
+    }
+    else {
+        W_WIDTH = 160;
+        W_HEIGHT = 144;
+    }
+
     //set up window
-    Window *win = new Window(256 * SCALE, 212 * SCALE);
+    Window *win = new Window(W_WIDTH * PROGRAM_SCALE, W_HEIGHT * PROGRAM_SCALE);
+
     win->setTitle(cores.rom_title);
     win->setColour(0);
     win->refresh(true);
@@ -97,13 +142,26 @@ int main(int argc, char** args) {
     // composited onto the window.
     SDL_Surface *wind_buf = win->getSurface();
 
-    SDL_Surface *frame = copy_frame(args[0]);
-    // Adjust this if you want to put the screen somewhere else
-    SDL_Rect gameboy_screen_rect = (SDL_Rect){48 * SCALE, 28 * SCALE, 160 * SCALE, 144 * SCALE};
-    SDL_Rect win_size = (SDL_Rect){0, 0, 256 * SCALE, 212 * SCALE};
-    if (frame) {
-        SDL_BlitScaled(frame, NULL, wind_buf, &win_size);
-        SDL_FreeSurface(frame);
+    SDL_Rect gameboy_screen_rect;
+
+    if (DRAW_FRAME) {
+        // Adjust this if you want to put the screen somewhere else
+        gameboy_screen_rect = (SDL_Rect){48 * PROGRAM_SCALE, 28 * PROGRAM_SCALE, 160 * PROGRAM_SCALE, 144 * PROGRAM_SCALE};
+        SDL_Rect win_size = (SDL_Rect){0, 0, 256 * PROGRAM_SCALE, 212 * PROGRAM_SCALE};
+
+        SDL_Surface *frame = copy_frame(args[0]);
+
+        if (frame) {
+            SDL_BlitScaled(frame, NULL, wind_buf, &win_size);
+            SDL_FreeSurface(frame);
+        }
+    }
+    else {
+        gameboy_screen_rect = (SDL_Rect){0, 0, 160 * PROGRAM_SCALE, 144 * PROGRAM_SCALE};
+    }
+
+    if (GPU_P) {
+        cores.gpu->choose_palette(GPU_P);
     }
 
     win->refresh(false);
@@ -124,7 +182,7 @@ int main(int argc, char** args) {
 
         //Handle events on queue
         if (!SDL_PollEvent(&e)) {
-            usleep(100);
+            SDL_Delay(1);
             continue;
         }
 
