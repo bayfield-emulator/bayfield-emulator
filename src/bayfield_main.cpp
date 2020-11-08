@@ -11,10 +11,10 @@
 
 #include "emucore.h"
 #include "mbc.h"
-#include "GPU.h"
-#include "Window.h"
+#include "GPU.hpp"
+#include "Window.hpp"
 #include "bayfield.h"
-#include "joypad.h"
+#include "joypad.hpp"
 #include "file_picker.h"
 
 #define SCALE 3

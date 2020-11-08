@@ -3,8 +3,8 @@
 
 #include <SDL2/SDL.h>
 #include "emucore.h"
-#include "joypad.h"
-#include "GPU.h"
+#include "joypad.hpp"
+#include "GPU.hpp"
 
 typedef struct {
     char rom_title[17];

@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include "emucore.h"
 #include "mbc.h"
-#include "GPU.h"
-#include "Window.h"
+#include "GPU.hpp"
+#include "Window.hpp"
 #include "bayfield.h"
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__

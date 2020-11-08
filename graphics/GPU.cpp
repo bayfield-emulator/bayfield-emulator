@@ -4,7 +4,7 @@ NICK
 2019
 */
 
-#include "GPU.h"
+#include "GPU.hpp"
 
 /* PRIVATE */
 

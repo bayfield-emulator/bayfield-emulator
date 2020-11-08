@@ -4,7 +4,7 @@ NICK
 2019
 */
 
-#include "Window.h"
+#include "Window.hpp"
 
 /* PRIVATE */
 

@@ -5,8 +5,8 @@
 #include <unistd.h>
 #include <stdint.h>
 #include "emucore.h"
-#include "GPU.h"
-#include "Window.h"
+#include "GPU.hpp"
+#include "Window.hpp"
 #include "bayfield.h"
 
 #define CPU_CLOCKS_PER_SEC 4194304
