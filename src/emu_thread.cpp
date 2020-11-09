@@ -60,14 +60,12 @@ void panic(const char *fmt, ...) {
 }
 
 static void gpu_interrupt_request_VBLANK(emu_shared_context_t *ctx) {
-    // debug_log("vblanking now");
+    debug_log("vblanking now");
     bc_request_interrupt(ctx->cpu, IF_VBLANK);
-
-    ctx->gpu->redraw();
 }
 
 static void gpu_interrupt_request_STAT(emu_shared_context_t *ctx) {
-    // debug_log("lcds now");
+    debug_log("lcds now");
     bc_request_interrupt(ctx->cpu, IF_LCDSTAT);
 }
 
@@ -203,9 +201,6 @@ void emu_thread_go(emu_shared_context_t *ctx) {
         if (!frame_stat && (ctx->gpu->get_FF(0x41) & 0x3) == 1) {
             // GPU in vblank
             // printf("GPU entered vblank!\n");
-            // ctx->gpu->draw_bg();
-            // ctx->gpu->draw_window();
-            // ctx->gpu->draw_sprites();
             // swap_buffers(ctx);
             fps++;
             frame_stat = 1;

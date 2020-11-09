@@ -117,9 +117,6 @@ class GPU {
 		/* Setup */
 		void init(uint32_t* ptr_to_win_memory);
 
-		/* Redraw all layers */
-		void redraw();
-
 		/* Simulate [clocks] cycles of the PPU */
 		void render(uint32_t clocks);
 

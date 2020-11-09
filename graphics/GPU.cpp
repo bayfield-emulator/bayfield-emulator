@@ -39,10 +39,7 @@ void GPU::init(uint32_t* ptr_to_win_memory) {
 	WINDOW_MEMORY = ptr_to_win_memory;
 }
 
-//todo: remove references
-void GPU::redraw() {}
-
-//assemble all buffers and produce final frame
+//assemble all layers and produce final frame, one pixel at a time
 // clocks: Number of cycles to simulate
 void GPU::render(uint32_t clocks) {
 
