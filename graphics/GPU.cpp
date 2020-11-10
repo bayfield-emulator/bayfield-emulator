@@ -193,7 +193,6 @@ void GPU::render(uint32_t clocks) {
 						}
 
 						/* SPRITES DRAW */
-
 						if (GPU_REG_LCD_CONTROL & ENABLE_OBJ) {
 
 							uint8_t index = 0xFF;

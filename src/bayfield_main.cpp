@@ -52,8 +52,6 @@ int main(int argc, char** args) {
     bool DRAW_FRAME = true;
     int GPU_P = 0;
 
-#define GPU_MAX_PALETTE 1
-
     if (SDL_Init(SDL_INIT_VIDEO)) { // SDL could not initialize
         show_simple_error("SDL INIT FAILURE", "Could not initialize required SDL subsystems.");
         return 1;

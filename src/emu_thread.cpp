@@ -156,8 +156,6 @@ void release_cores(emu_shared_context_t *ctx) {
 
 static void run_hardware(emu_shared_context_t *ctx, int ncycs) {
     debug_assert(ncycs > 0 && (ncycs % 4) == 0, "Need a multiple of 4 clocks");
-    // bc_cpu_step(ctx->cpu, ncycs);
-    // ctx->gpu->render(ncycs);
     while (ncycs > 0) {
         bc_cpu_step(ctx->cpu, 16);
         ctx->gpu->render(16);
@@ -188,20 +186,15 @@ void emu_thread_go(emu_shared_context_t *ctx) {
         }
         
         cps += CYCS_PER_TICK;
-        // usleep(SLEEP_TIME - 500); 
 
         if (SDL_GetTicks() - frame_counter_epoch >= 1000) {
             frame_counter_epoch = SDL_GetTicks();
-            // printf("\t\t\t\t\tFPS: %d\n", fps);
-            // printf("\t\t\t\t\tCycs ran: %d\n", cps);
             fps = 0;
             cps = 0;
         }
 
         if (!frame_stat && (ctx->gpu->get_FF(0x41) & 0x3) == 1) {
             // GPU in vblank
-            // printf("GPU entered vblank!\n");
-            // swap_buffers(ctx);
             fps++;
             frame_stat = 1;
         } else if (frame_stat && (ctx->gpu->get_FF(0x41) & 0x3) != 1) {
@@ -225,8 +218,6 @@ void emu_thread_go(emu_shared_context_t *ctx) {
         } else {
             sleep_time = (time_left - (step_time2 * nsteps_left)) / nsteps_left;
         }
-        // printf("Step time: %d        Steps left: %d      Sleep time: %d       usec left: %d\n",
-        //    step_time2, nsteps_left, sleep_time, time_left);
         usleep(sleep_time); 
     }
 }
