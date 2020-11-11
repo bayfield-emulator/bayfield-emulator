@@ -9,6 +9,8 @@
 #include "Window.hpp"
 #include "bayfield.h"
 
+#define HEADER_MAGIC_NUMBER 0x0A6F2EDB
+
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     static uint32_t from_disk_u32(uint32_t x) {
         return (((x & 0xff000000) >> 24) | ((x & 0xff0000) >> 8) | ((x & 0xff00) << 8) | ((x & 0xff) << 24));
@@ -100,7 +102,14 @@ void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
 }
 
 bool validate_rom(void* image) {
-    return true;
+    uint64_t computed = 0;
+    uint16_t* header = (uint16_t*) image + 0x82;
+
+    for (int i = 0; i < 24; i++) {
+        computed += header[i] * (i + 1) * (i + 1) - 1;
+    }
+
+    return (computed == HEADER_MAGIC_NUMBER);
 }
 
 bool load_rom(emu_shared_context_t *ctx, const char *filename) {
