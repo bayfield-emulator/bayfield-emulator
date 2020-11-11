@@ -106,9 +106,23 @@ int main(int argc, char** args) {
     emu_shared_context_t cores;
     memset(&cores, 0, sizeof(emu_shared_context_t));
     init_cores(&cores);
-    if (!load_rom(&cores, rom_path)) {
-        show_simple_error("ROM LOAD FAILURE", "Couldn't load ROM.");
-        return 1;
+
+    uint8_t load_rom_rc = load_rom(&cores, rom_path);
+
+    switch (load_rom_rc) {
+        case ROM_OK:
+            break;
+        case ROM_FAIL_VALIDATION:
+            show_simple_error("ROM LOAD FAILURE", "ROM failed to validate. Is it intact and a real ROM?");
+            return 1;
+        case ROM_FAIL_READ:
+            show_simple_error("ROM LOAD FAILURE", "Failed to read ROM file.");
+            return 1;
+        case MEM_FAIL_ALLOC:
+            show_simple_error("ROM LOAD FAILURE", "Failed to allocate sufficient memory for ROM.");
+            return 1;
+        default:
+            return 1;
     }
 
     if (load_save(&cores, rom_path) != 0) {

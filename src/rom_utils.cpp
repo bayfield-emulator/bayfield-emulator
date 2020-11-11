@@ -9,7 +9,12 @@
 #include "Window.hpp"
 #include "bayfield.h"
 
-#define HEADER_MAGIC_NUMBER 0x0A6F2EDB
+#define HEADER_MAGIC_NUMBER 0x00524E38
+
+#define POS_LOGO        0x104
+#define POS_HEADER      0x134
+#define POS_CHECKSUM    0x14D
+#define POS_G_CHECKSUM  0x14E
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     static uint32_t from_disk_u32(uint32_t x) {
@@ -101,24 +106,40 @@ void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
     cart->extram = cart->extram_base;
 }
 
-bool validate_rom(void* image) {
-    uint64_t computed = 0;
-    uint16_t* header = (uint16_t*) image + 0x82;
+uint8_t validate_rom(uint8_t* image) {
 
-    for (int i = 0; i < 24; i++) {
-        computed += header[i] * (i + 1) * (i + 1) - 1;
+    /* HEADER LOGO VALIDATION */
+    uint64_t logo_computed = 0;
+    for (int i = 0; i < 48; i++) {
+        logo_computed += image[POS_LOGO + i] * (i + 1) * (i + 1) - 1;
     }
 
-    return (computed == HEADER_MAGIC_NUMBER);
+    if (logo_computed != HEADER_MAGIC_NUMBER) {
+        return ROM_FAIL_VALIDATION;
+    }
+
+    /* HEADER CHECKSUM VALIDATION */
+    uint8_t header_computed = 0;
+    for (int i = 0; i < 25; i++) {
+        header_computed = header_computed - image[POS_HEADER + i] - 1;
+    }
+
+    if (header_computed != image[POS_CHECKSUM]) {
+        return ROM_FAIL_VALIDATION;
+    }
+
+    /* TODO: ROM CHECKSUM VALIDATION */
+
+    return ROM_OK;
 }
 
-bool load_rom(emu_shared_context_t *ctx, const char *filename) {
+uint8_t load_rom(emu_shared_context_t *ctx, const char *filename) {
     std::fstream stream(filename, std::ios::in | std::ios::binary);
 
     //test file existence
     if (!stream.is_open()) {
         std::cerr << "Could not read file" << std::endl;
-        return false;
+        return ROM_FAIL_READ;
     }
 
     stream.seekg(0, std::ios::end);
@@ -136,7 +157,7 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
     uint8_t *full_image = (uint8_t *) malloc(rounded);
     if (!full_image) {
         std::cerr << "Could not alloc ROM image!" << std::endl;
-        return false;
+        return MEM_FAIL_ALLOC;
     }
 
     if (rom_size < rounded) {
@@ -150,15 +171,16 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
         std::cerr << "Could not read all of ROM image." << std::endl;
         free(full_image);
         stream.close();
-        return false;
+        return ROM_FAIL_READ;
     }
 
     stream.close();
 
-    if (!validate_rom((void *) full_image)) {
-        std::cerr << "ROM failed validation" << std::endl;
+    uint8_t load_rom_rc = validate_rom(full_image);
+
+    if (load_rom_rc != ROM_OK) {
         free(full_image);
-        return false;
+        return load_rom_rc;
     }
 
     /*Title [16 bytes long from 0x0134]*/
@@ -190,7 +212,8 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
            "ROM TYPE: %x \n"
            "ROM SIZE: %llx \n"
            "RAM SIZE: %x \n", ctx->rom_title, mbc, (uint64_t)rom_size, ram_size);
-    return true;
+
+    return ROM_OK;
 }
 
 // djb2 hash from http://www.cse.yorku.ca/~oz/hash.html
