@@ -194,24 +194,24 @@ void bc_cpu_reset(bc_cpu_t *cpu) {
     bc_mmap_putvalue(&cpu->mem, 0xFF06, 0); // timer mod: 0
     bc_mmap_putvalue(&cpu->mem, 0xFF07, 0); // timer ctl: 4.096khz
 
-    bc_mmap_putvalue(&cpu->mem, 0xFF10, 0x80); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF11, 0xBF); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF12, 0xF3); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF14, 0xBF); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF16, 0x3F); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF17, 0x00); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF19, 0xBF); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF1A, 0x7F); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF1B, 0xFF); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF1C, 0x9F); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF1E, 0xBF); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF20, 0xFF); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF21, 0x00); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF22, 0x00); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF23, 0xBF); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF24, 0x77); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF25, 0xF3); 
-    bc_mmap_putvalue(&cpu->mem, 0xFF26, 0xF1); 
+    bc_mmap_putvalue(&cpu->mem, 0xFF10, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF11, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF12, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF14, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF16, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF17, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF19, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF1A, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF1B, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF1C, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF1E, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF20, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF21, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF22, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF23, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF24, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF25, 0x00);
+    bc_mmap_putvalue(&cpu->mem, 0xFF26, 0x00);
 
     bc_mmap_putvalue(&cpu->mem, 0xFF40, 0x91);
     bc_mmap_putvalue(&cpu->mem, 0xFF42, 0x00);
