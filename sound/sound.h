@@ -21,6 +21,11 @@ typedef struct {
 } sound_ve_t;
 
 typedef struct {
+    int timebase;
+    int tick;
+} sound_timer_t;
+
+typedef struct {
     float charge;
     float rate;
 } sound_filter_t;
@@ -36,14 +41,9 @@ typedef struct {
 
     // internal state ---------------------------
 
-    uint32_t prod_tick_base;
-    uint32_t prod_tick;
-
-    uint32_t clocks;
     uint32_t master_enable;
     // FF26 contents
     uint8_t status_reg;
-    uint8_t step;
 
     // Bit 7 - Output sound 4 to left terminal
     // Bit 6 - Output sound 3 to left terminal
@@ -54,15 +54,22 @@ typedef struct {
     // Bit 1 - Output sound 2 to right terminal
     // Bit 0 - Output sound 1 to right terminal
     uint8_t pan_reg;
-
+    uint8_t sequencer_step;
+    
     int volume_left;
     int volume_right;
+    
+    sound_timer_t prod_timer;
+    sound_timer_t sequencer_timer;
+    sound_timer_t ch1_duty_timer;
+    sound_timer_t ch2_duty_timer;
+    sound_timer_t ch3_timer;
+    sound_timer_t ch4_timer;
 
     // channel 1: square wave
     int square1_lenable;
     int square1_lctr;
     int square1_freq;
-    int square1_timebase;
     int square1_duty_shape;
     sound_ve_t s1_envelope;
 
@@ -74,18 +81,15 @@ typedef struct {
     int square1_swp_tick;
     int square1_swp_sha;
 
-    int square1_tick;
     int square1_duty;
 
     // channel 2: square wave without freq sweep
     int square2_lenable;
     int square2_lctr;
     int square2_freq;
-    int square2_timebase;
     int square2_duty_shape;
     sound_ve_t s2_envelope;
 
-    int square2_tick;
     int square2_duty;
 
     // channel 3: wave unit
@@ -99,10 +103,6 @@ typedef struct {
     int wave_volume;
     // raw frequency value (0-2048)
     int wave_freq;
-    // number of clocks between advancing read head (internal)
-    int wave_timebase;
-    // ch3 advance counter (0-wave_timebase)
-    int wave_tick;
     // sample ram 32 * 4bits
     uint8_t wave_pram[16];
     // read head (0-32)
@@ -113,12 +113,8 @@ typedef struct {
     // 15 bit lfsr
     uint32_t noise_reg;
     // reduce lfsr range?
-    uint32_t noise_low: 1,
-    // number of clocks between advancing lfsr
-             noise_timebase: 16;
+    uint32_t noise_low;
     sound_ve_t noise_envelope;
-    // time until advancing lfsr (0-noise_timebase)
-    int noise_tick;
 
     sound_filter_t cap_l;
     sound_filter_t cap_r;

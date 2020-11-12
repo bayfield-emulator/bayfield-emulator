@@ -35,6 +35,7 @@ void sound_ve_configure(sound_ve_t *env, uint8_t regval) {
     env->ve_init_volume = (regval & 0xF0) >> 4;
     env->ve_direction = (regval & 0x08) >> 3;
     env->ve_ctr_base = regval & 0x07;
+    env->ve_cur_tick = env->ve_ctr_base;
 
     if (!env->ve_cur_enabled) {
         env->ve_cur_volume = env->ve_init_volume;

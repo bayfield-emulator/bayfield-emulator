@@ -1,4 +1,5 @@
 #include "sound.h"
+#include "../emucore/emucore.h"
 
 #define SND_DEBUG_CH1 1
 #define SND_DEBUG_CH2 (1 << 1)
@@ -20,7 +21,33 @@
 extern "C" {
 #endif
 
+#define SOUND_CHANNEL_ENABLE(ctlr, chid) ((ctlr)->status_reg |= (1 << ((chid) - 1)))
+#define SOUND_CHANNEL_DISABLE(ctlr, chid) ((ctlr)->status_reg &= ~(1 << ((chid) - 1)))
+#define SOUND_CHANNEL_IS_ON(ctlr, chid) ((ctlr)->status_reg & (1 << ((chid) - 1)))
+
 #define SOUND_VE_GETVOL(stt) ((stt)->ve_cur_volume / 15.0)
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+static int sound_timer_tick(sound_timer_t *timer, int ncycs) {
+    timer->tick -= ncycs;
+
+    if (timer->tick <= 0) {
+        timer->tick = timer->timebase + timer->tick;
+        return 1;
+    }
+
+    return 0;
+}
+
+static void sound_timer_set_base(sound_timer_t *timer, int timebase) {
+    timer->timebase = timebase;
+}
+
+static void sound_timer_reset(sound_timer_t *timer) {
+    timer->tick = timer->timebase;
+}
+#pragma clang diagnostic pop
 
 void sound_square_install_regs(sound_ctlr_t *state, void *target, snd_mmio_add_observer_t reg_func);
 void sound_square_onsweep(sound_ctlr_t *state);
@@ -38,7 +65,7 @@ void sound_noise_onclock(sound_ctlr_t *state, int ncyc);
 
 void sound_ve_configure(sound_ve_t *env, uint8_t regval);
 void sound_ve_oninit(sound_ve_t *env);
-void sound_ve_onclock(sound_ve_t *env, int debug);
+void sound_ve_onclock(sound_ve_t *env);
 
 #ifdef __cplusplus
 }
