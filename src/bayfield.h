@@ -23,8 +23,10 @@ typedef struct {
 enum ROM_LOAD_RC : uint8_t {
     ROM_OK,
     ROM_FAIL_VALIDATION,
+    ROM_FAIL_FULL_VALIDATION,
     ROM_FAIL_READ,
-    MEM_FAIL_ALLOC,
+    ROM_SIZE_MISMATCH,
+    MEM_FAIL_ALLOC
 };
 
 // FUNCTIONS IN emu_thread.cpp

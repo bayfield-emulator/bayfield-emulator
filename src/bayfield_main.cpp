@@ -107,16 +107,20 @@ int main(int argc, char** args) {
     memset(&cores, 0, sizeof(emu_shared_context_t));
     init_cores(&cores);
 
-    uint8_t load_rom_rc = load_rom(&cores, rom_path);
-
-    switch (load_rom_rc) {
+    switch (load_rom(&cores, rom_path)) {
         case ROM_OK:
             break;
         case ROM_FAIL_VALIDATION:
-            show_simple_error("ROM LOAD FAILURE", "ROM failed to validate. Is it intact and a real ROM?");
+            show_simple_error("ROM ERROR", "ROM failed to validate. Is it intact and a real ROM?");
             return 1;
+        case ROM_FAIL_FULL_VALIDATION:
+            show_simple_error("NON-FATAL ROM ERROR", "ROM failed full validation. \nReal hardware does not check this, but it may indicate a corrupted ROM file.");
+            break;
         case ROM_FAIL_READ:
             show_simple_error("ROM LOAD FAILURE", "Failed to read ROM file.");
+            return 1;
+        case ROM_SIZE_MISMATCH:
+            show_simple_error("ROM ERROR", "ROM file size does not match it's declared size.");
             return 1;
         case MEM_FAIL_ALLOC:
             show_simple_error("ROM LOAD FAILURE", "Failed to allocate sufficient memory for ROM.");
