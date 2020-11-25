@@ -16,6 +16,7 @@
 #include "bayfield.h"
 #include "joypad.hpp"
 #include "file_picker.h"
+#include "version_info.hpp"
 
 SDL_Surface *copy_frame(const char *executable_path) {
     const char *frame_rel = "assets/eframe.bmp";
@@ -37,11 +38,22 @@ SDL_Surface *copy_frame(const char *executable_path) {
     return ret;
 }
 
+/* Show a simple error message box or print error to console if box fails */
 void show_simple_error(std::string title, std::string message) {
     title.insert(0, "BAYFIELD: ");
     if (SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title.c_str(), message.c_str(), nullptr)) {
         // if message box could not be shown, last ditch console print
         std::cerr << message << std::endl;
+    }
+    return;
+}
+
+/* Show a simple information box or print message to console if box fails */
+void show_simple_info(std::string title, std::string message) {
+    title.insert(0, "BAYFIELD: ");
+    if (SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, title.c_str(), message.c_str(), nullptr)) {
+        // if message box could not be shown, last ditch console print
+        std::cout << message << std::endl;
     }
     return;
 }
@@ -64,7 +76,11 @@ int main(int argc, char** args) {
         if (args[i][0] == '-') {
             switch (args[i][1]) {
                 case 'v': //version
-                    std::cout << "BAYFIELD EMULATOR v1.2.0" << std::endl;
+                    show_simple_info("VERSION INFO", 
+                                    "BAYFIELD EMULATOR " + VERSION_BFE() +
+                                    "\nBUILT WITH " + VERSION_CXX() +
+                                    "\nCOMPILED AGAINST SDL " + VERSION_SDL_COMPILED() +
+                                    "\nLINKED AGAINST SDL " + VERSION_SDL_LINKED());
                     return 0;
                 case 's': //scale
                     if (i + 1 < argc) {
@@ -85,7 +101,13 @@ int main(int argc, char** args) {
             }
         }
         else if (args[i][0] == '?') {
-            std::cout << "HELP MESSAGE HERE" << std::endl;
+            show_simple_info("HELP", 
+                            "Usage: Bayfield <args> [filename]"
+                            "\nArgs:"
+                            "\n -v: Print version"
+                            "\n -f: Disable emulator frame"
+                            "\n -s #: Set window scaling to #"
+                            "\n -p #: Set emulator palette to #");
             return 0;
         }
         else {
