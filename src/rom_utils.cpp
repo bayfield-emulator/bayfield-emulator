@@ -230,9 +230,13 @@ uint8_t load_rom(emu_shared_context_t *ctx, const char *filename) {
 
     uint8_t load_rom_rc = validate_rom(full_image, rom_size);
 
-    if (load_rom_rc != ROM_OK) {
-        free(full_image);
-        return load_rom_rc;
+
+    if (load_rom_rc != ROM_OK) { // Anything other than OK is an error
+        if (load_rom_rc == ROM_FAIL_FULL_VALIDATION); // This is just a warning, skip this case
+        else {
+            free(full_image);
+            return load_rom_rc;
+        }
     }
 
     /*Title [16 bytes long from 0x0134]*/
@@ -265,7 +269,7 @@ uint8_t load_rom(emu_shared_context_t *ctx, const char *filename) {
            "ROM SIZE: %llx \n"
            "RAM SIZE: %x \n", ctx->rom_title, mbc, (uint64_t)rom_size, ram_size);
 
-    return ROM_OK;
+    return load_rom_rc;
 }
 
 // djb2 hash from http://www.cse.yorku.ca/~oz/hash.html
