@@ -8,7 +8,7 @@
 /* BAYFIELD VERSION */
 #define BFE_MAJOR 1
 #define BFE_MINOR 2
-#define BFE_PATCH 0
+#define BFE_PATCH 1
 
 /* COMPILER VERSION */
 /* Why is this not standardized?!? */
