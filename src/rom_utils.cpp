@@ -232,8 +232,7 @@ uint8_t load_rom(emu_shared_context_t *ctx, const char *filename) {
 
 
     if (load_rom_rc != ROM_OK) { // Anything other than OK is an error
-        if (load_rom_rc == ROM_FAIL_FULL_VALIDATION); // This is just a warning, skip this case
-        else {
+        if (load_rom_rc != ROM_FAIL_FULL_VALIDATION) { // Skip freeing on non-fatal error 
             free(full_image);
             return load_rom_rc;
         }
