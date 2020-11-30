@@ -35,6 +35,15 @@ There should be no instance where you are without these; prebuilt binaries have 
 - On Linux, you must pass a ROM's filename as an argument - as a parameter on the command line or by dropping the ROM file onto the executable, if supported. 
 - On Windows and macOS, you also have the option of launching the emulator without specifying a ROM, which will cause a file picker to pop up.
 
+##### Additional Command Line Options
+There are a few options that you may be able to launch the emulator with, depending on the platform.
+
+|  Arg |                    Effect                    |
+|:----:|:--------------------------------------------:|
+|   -v | Print version information                    |
+|   -f | Disable emulator frame                       |
+| -s # | Set scaling to # times native resolution     |
+| -p # | Set emulator to use palette # [experimental] |
 
 ## PLAYING
 There are mappings for all Gameboy buttons:

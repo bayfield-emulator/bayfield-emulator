@@ -3,11 +3,11 @@
 
 #include <SDL2/SDL.h>
 #include "emucore.h"
-#include "joypad.h"
-#include "GPU.h"
+#include "joypad.hpp"
+#include "GPU.hpp"
 
 typedef struct {
-    char rom_title[16];
+    char rom_title[17];
     bc_cpu_t *cpu;
     GPU *gpu;
     joyp_t joypad;
@@ -20,6 +20,15 @@ typedef struct {
     int stop;
 } emu_shared_context_t;
 
+enum ROM_LOAD_RC : uint8_t {
+    ROM_OK,
+    ROM_FAIL_VALIDATION,
+    ROM_FAIL_FULL_VALIDATION,
+    ROM_FAIL_READ,
+    ROM_SIZE_MISMATCH,
+    MEM_FAIL_ALLOC
+};
+
 // FUNCTIONS IN emu_thread.cpp
 
 void emu_thread_go(emu_shared_context_t *ctx);
@@ -29,7 +38,7 @@ void release_cores(emu_shared_context_t *ctx);
 // FUNCTIONS IN rom_utils.cpp
 
 // Sets up the rom part of the cpu's memory map, and MBC stuff if needed
-bool load_rom(emu_shared_context_t *ctx, const char *filename);
+uint8_t load_rom(emu_shared_context_t *ctx, const char *filename);
 // Load the save file (if the rom's MBC type has one)
 int load_save(emu_shared_context_t *ctx, const char *filename);
 // Saves the save file (if the rom's MBC type has one)

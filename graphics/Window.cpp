@@ -4,7 +4,7 @@ NICK
 2019
 */
 
-#include "Window.h"
+#include "Window.hpp"
 
 /* PRIVATE */
 
@@ -34,7 +34,6 @@ Window::Window(int w, int h, bool visible) {
 
 Window::~Window() {
 	SDL_DestroyWindow(window);
-	// SDL_DestroyRenderer(renderer);
 }
 
 /*

@@ -5,9 +5,22 @@
 #include <stdint.h>
 #include "emucore.h"
 #include "mbc.h"
-#include "GPU.h"
-#include "Window.h"
+#include "GPU.hpp"
+#include "Window.hpp"
 #include "bayfield.h"
+
+#define HEADER_MAGIC_NUMBER 0x00524E38
+
+#define UNIT_KB         1024
+#define SIZE_ROM_BANK   16 * UNIT_KB
+
+#define HEADER_POS_LOGO        0x0104
+#define HEADER_POS_TITLE       0x0134
+#define HEADER_POS_MBC         0x0147
+#define HEADER_POS_SIZE        0x0148
+#define HEADER_POS_RAM         0x0149
+#define HEADER_POS_CHECKSUM    0x014D
+#define HEADER_POS_G_CHECKSUM  0x014E
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     static uint32_t from_disk_u32(uint32_t x) {
@@ -17,12 +30,20 @@
     static uint32_t to_disk_u32(uint32_t x) {
         return (((x & 0xff000000) >> 24) | ((x & 0xff0000) >> 8) | ((x & 0xff00) << 8) | ((x & 0xff) << 24));
     }
+
+    static uint16_t from_disk_u16(uint16_t x) {
+        return (((x & 0xff00) >> 8) | ((x & 0x00ff) << 8));
+    }
 #else
     static uint32_t from_disk_u32(uint32_t x) {
         return x;
     }
 
     static uint32_t to_disk_u32(uint32_t x) {
+        return x;
+    }
+
+    static uint16_t from_disk_u16(uint16_t x) {
         return x;
     }
 #endif
@@ -99,13 +120,78 @@ void setup_mbc(cartridge_t *cart, uint8_t *full_image) {
     cart->extram = cart->extram_base;
 }
 
-bool load_rom(emu_shared_context_t *ctx, const char *filename) {
+uint8_t validate_rom(uint8_t* image, uint32_t size) {
+
+    /* HEADER LOGO VALIDATION */
+    uint64_t logo_computed = 0;
+    for (int i = 0; i < 48; i++) {
+        logo_computed += image[HEADER_POS_LOGO + i] * (i + 1) * (i + 1) - 1;
+    }
+
+    if (logo_computed != HEADER_MAGIC_NUMBER) {
+        return ROM_FAIL_VALIDATION;
+    }
+
+    /* HEADER CHECKSUM VALIDATION */
+    uint8_t header_computed = 0;
+    for (int i = 0; i < 25; i++) {
+        header_computed = header_computed - image[HEADER_POS_TITLE + i] - 1;
+    }
+
+    if (header_computed != image[HEADER_POS_CHECKSUM]) {
+        return ROM_FAIL_VALIDATION;
+    }
+
+    /* ROM SIZE VALIDATION */
+    uint8_t header_size_class = image[HEADER_POS_SIZE];
+    uint32_t rom_size = 0;
+    if (header_size_class <= 8) { // the first set of ROM sizes are easy to calculate
+         rom_size = (SIZE_ROM_BANK * (2 << header_size_class));
+    }
+    else {
+        switch (header_size_class) { // the last few must be hardcoded
+            case 0x52:
+                rom_size = 72 * SIZE_ROM_BANK;
+                break;
+            case 0x53:
+                rom_size = 80 * SIZE_ROM_BANK;
+                break;
+            case 0x54:
+                rom_size = 96 * SIZE_ROM_BANK;
+                break;
+            default:
+                break;
+        }
+    }
+
+    if (size != rom_size) {
+        return ROM_SIZE_MISMATCH;
+    }
+
+    /* FULL ROM CHECKSUM VALIDATION */
+    uint16_t target_checksum = from_disk_u16(((uint16_t *) image)[HEADER_POS_G_CHECKSUM/2]);
+    uint16_t running_checksum = 0;
+    for (uint32_t i = 0; i < HEADER_POS_G_CHECKSUM; i++) { // running sum of all bits in header up to checksum
+        running_checksum += image[i];
+    }
+    for (uint32_t i = HEADER_POS_G_CHECKSUM + 2; i < size; i++) { // continue summing remaining ROM after checksum
+        running_checksum += image[i];
+    }
+
+    if (target_checksum != running_checksum) {
+        return ROM_FAIL_FULL_VALIDATION;
+    }
+
+    return ROM_OK;
+}
+
+uint8_t load_rom(emu_shared_context_t *ctx, const char *filename) {
     std::fstream stream(filename, std::ios::in | std::ios::binary);
 
     //test file existence
     if (!stream.is_open()) {
         std::cerr << "Could not read file" << std::endl;
-        return false;
+        return ROM_FAIL_READ;
     }
 
     stream.seekg(0, std::ios::end);
@@ -113,7 +199,7 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
     stream.seekg(0);
 
     // Constrain to 16K chunk. This is the size of a ROM bank.
-    size_t rounded = (rom_size & 0x3FFF)? (0x4000 * ((rom_size / 16384) + 1)) : rom_size;
+    size_t rounded = (rom_size & 0x3FFF)? (0x4000 * ((rom_size / (16 * UNIT_KB)) + 1)) : rom_size;
     // Make sure our buffer is at least 32K because we'll be setting up the bank switchable
     // region to point there.
     if (rounded < 0x8000) {
@@ -123,7 +209,7 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
     uint8_t *full_image = (uint8_t *) malloc(rounded);
     if (!full_image) {
         std::cerr << "Could not alloc ROM image!" << std::endl;
-        return false;
+        return MEM_FAIL_ALLOC;
     }
 
     if (rom_size < rounded) {
@@ -137,26 +223,32 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
         std::cerr << "Could not read all of ROM image." << std::endl;
         free(full_image);
         stream.close();
-        return false;
+        return ROM_FAIL_READ;
     }
 
     stream.close();
 
-    //assume file is legitimate ROM
+    uint8_t load_rom_rc = validate_rom(full_image, rom_size);
+
+
+    if (load_rom_rc != ROM_OK) { // Anything other than OK is an error
+        if (load_rom_rc != ROM_FAIL_FULL_VALIDATION) { // Skip freeing on non-fatal error 
+            free(full_image);
+            return load_rom_rc;
+        }
+    }
+
     /*Title [16 bytes long from 0x0134]*/
     /*ROM Type [single byte at 0x0147]*/
     /*RAM Size [single byte at 0x0149]*/
-    const char *title = (const char *)(full_image + 0x0134);
-    int mbc = full_image[0x0147];
-    int ram_size = full_image[0x0149];
+    const char *title = (const char *)(full_image + HEADER_POS_TITLE);
+    int mbc = full_image[HEADER_POS_MBC];
+    int ram_size = full_image[HEADER_POS_RAM];
+
     for (int i = 0; i < 16; i++) {
-        if (title[i] & 0x80) {
-            ctx->rom_title[i] = '\0';
-            break;
-        }
         ctx->rom_title[i] = title[i];
+        if (!title[i]) break;
     }
-    ctx->rom_title[15] = '\0';
 
     /* most of this section can be moved into emucore */
     cartridge_t my_rom;
@@ -164,7 +256,7 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
     my_rom.rom = full_image;
     my_rom.image_size = rounded;
     my_rom.bank1 = full_image;
-    my_rom.bankx = full_image + 16384;
+    my_rom.bankx = full_image + SIZE_ROM_BANK;
 
     setup_mbc(&my_rom, full_image);
 
@@ -175,7 +267,8 @@ bool load_rom(emu_shared_context_t *ctx, const char *filename) {
            "ROM TYPE: %x \n"
            "ROM SIZE: %llx \n"
            "RAM SIZE: %x \n", ctx->rom_title, mbc, (uint64_t)rom_size, ram_size);
-    return true;
+
+    return load_rom_rc;
 }
 
 // djb2 hash from http://www.cse.yorku.ca/~oz/hash.html

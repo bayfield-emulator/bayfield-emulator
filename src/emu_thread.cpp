@@ -5,8 +5,8 @@
 #include <unistd.h>
 #include <stdint.h>
 #include "emucore.h"
-#include "GPU.h"
-#include "Window.h"
+#include "GPU.hpp"
+#include "Window.hpp"
 #include "bayfield.h"
 
 #define CPU_CLOCKS_PER_SEC 4194304
@@ -60,14 +60,12 @@ void panic(const char *fmt, ...) {
 }
 
 static void gpu_interrupt_request_VBLANK(emu_shared_context_t *ctx) {
-    // debug_log("vblanking now");
+    debug_log("vblanking now");
     bc_request_interrupt(ctx->cpu, IF_VBLANK);
-
-    ctx->gpu->redraw();
 }
 
 static void gpu_interrupt_request_STAT(emu_shared_context_t *ctx) {
-    // debug_log("lcds now");
+    debug_log("lcds now");
     bc_request_interrupt(ctx->cpu, IF_LCDSTAT);
 }
 
@@ -158,8 +156,6 @@ void release_cores(emu_shared_context_t *ctx) {
 
 static void run_hardware(emu_shared_context_t *ctx, int ncycs) {
     debug_assert(ncycs > 0 && (ncycs % 4) == 0, "Need a multiple of 4 clocks");
-    // bc_cpu_step(ctx->cpu, ncycs);
-    // ctx->gpu->render(ncycs);
     while (ncycs > 0) {
         bc_cpu_step(ctx->cpu, 16);
         ctx->gpu->render(16);
@@ -190,23 +186,15 @@ void emu_thread_go(emu_shared_context_t *ctx) {
         }
         
         cps += CYCS_PER_TICK;
-        // usleep(SLEEP_TIME - 500); 
 
         if (SDL_GetTicks() - frame_counter_epoch >= 1000) {
             frame_counter_epoch = SDL_GetTicks();
-            // printf("\t\t\t\t\tFPS: %d\n", fps);
-            // printf("\t\t\t\t\tCycs ran: %d\n", cps);
             fps = 0;
             cps = 0;
         }
 
         if (!frame_stat && (ctx->gpu->get_FF(0x41) & 0x3) == 1) {
             // GPU in vblank
-            // printf("GPU entered vblank!\n");
-            // ctx->gpu->draw_bg();
-            // ctx->gpu->draw_window();
-            // ctx->gpu->draw_sprites();
-            // swap_buffers(ctx);
             fps++;
             frame_stat = 1;
         } else if (frame_stat && (ctx->gpu->get_FF(0x41) & 0x3) != 1) {
@@ -230,8 +218,6 @@ void emu_thread_go(emu_shared_context_t *ctx) {
         } else {
             sleep_time = (time_left - (step_time2 * nsteps_left)) / nsteps_left;
         }
-        // printf("Step time: %d        Steps left: %d      Sleep time: %d       usec left: %d\n",
-        //    step_time2, nsteps_left, sleep_time, time_left);
         usleep(sleep_time); 
     }
 }

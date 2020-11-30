@@ -4,7 +4,7 @@ NICK
 2019
 */
 
-#include "GPU.h"
+#include "GPU.hpp"
 
 /* PRIVATE */
 
@@ -25,6 +25,7 @@ GPU::GPU() {
 	memset(BG_MAP, 0xFF, (sizeof(uint8_t) * 32 * 32));
 	memset(WINDOW_MAP, 0xFF, (sizeof(uint8_t) * 32 * 32));
 	memset(OAM, 0x00, (sizeof(uint32_t) * 40));
+	memcpy(PALETTE, PALETTE_GR, (sizeof(uint32_t) * 4));
 }
 
 // destructor
@@ -38,10 +39,7 @@ void GPU::init(uint32_t* ptr_to_win_memory) {
 	WINDOW_MEMORY = ptr_to_win_memory;
 }
 
-//todo: remove references
-void GPU::redraw() {}
-
-//assemble all buffers and produce final frame
+//assemble all layers and produce final frame, one pixel at a time
 // clocks: Number of cycles to simulate
 void GPU::render(uint32_t clocks) {
 
@@ -195,7 +193,6 @@ void GPU::render(uint32_t clocks) {
 						}
 
 						/* SPRITES DRAW */
-
 						if (GPU_REG_LCD_CONTROL & ENABLE_OBJ) {
 
 							uint8_t index = 0xFF;
@@ -358,6 +355,11 @@ void GPU::set_FF(uint8_t reg_no, uint8_t value) {
 		default:
 			return;
 	}
+}
+
+void GPU::choose_palette(int mode) {
+	mode = ((mode < 0 || mode > PALETTE_COUNT - 1) ? 0 : mode);
+	memcpy(PALETTE, ALL_PALETTES[mode], (sizeof(uint32_t) * 4));
 }
 
 void GPU::set_intr_context(void *ctx){

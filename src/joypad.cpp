@@ -1,7 +1,7 @@
 #include <SDL2/SDL.h>
 #include <iostream>
 #include "emucore.h"
-#include "joypad.h"
+#include "joypad.hpp"
 
 // 0001
 #define JOYPAD_REG_HEAD_BUTTON_SELECTED (0x1 << 4)
