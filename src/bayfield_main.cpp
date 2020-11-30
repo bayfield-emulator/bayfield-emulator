@@ -98,17 +98,13 @@ int main(int argc, char** args) {
                 case 'f': //border
                     DRAW_FRAME = false;
                     break;
+                case 'h': //help
+                    show_simple_info("HELP", "Please see Bayfield documentation for usage details.");
+                    return 0;
+                default:
+                    show_simple_error("UNKNOWN ARG", std::string("Unknown argument '") + args[i] + "'.\nPlease see Bayfield documentation for usage details.");
+                    return 1;
             }
-        }
-        else if (args[i][0] == '?') {
-            show_simple_info("HELP", 
-                            "Usage: Bayfield <args> [filename]"
-                            "\nArgs:"
-                            "\n -v: Print version"
-                            "\n -f: Disable emulator frame"
-                            "\n -s #: Set window scaling to #"
-                            "\n -p #: Set emulator palette to #");
-            return 0;
         }
         else {
             if (access(args[i], F_OK) == 0) {
