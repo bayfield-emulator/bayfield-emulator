@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 
 #include "emucore.h"
 #include "mbc.h"
@@ -19,12 +20,12 @@
 #include "version_info.hpp"
 
 SDL_Surface *copy_frame(const char *executable_path) {
-    const char *frame_rel = "assets/eframe.bmp";
+    const char *frame_rel = "assets/eframe.png";
     SDL_Surface *ret;
     char *path;
 
     if (executable_path[0] != '/') {
-        ret = SDL_LoadBMP(frame_rel);
+        ret = IMG_Load(frame_rel);
         return ret;
     }
 
@@ -33,7 +34,7 @@ SDL_Surface *copy_frame(const char *executable_path) {
     memcpy(path, executable_path, strlen(executable_path) + 1);
     memcpy(strrchr(path, '/') + 1, frame_rel, strlen(frame_rel) + 1);
 
-    ret = SDL_LoadBMP(path);
+    ret = IMG_Load(path);
     delete[] path;
     return ret;
 }
@@ -195,8 +196,18 @@ int main(int argc, char** args) {
     win->setColour(0);
     win->refresh(true);
 
-    // Draw a frame around the emulator. We make the GPU draw into a separate surface that gets
-    // composited onto the window.
+    // Windows has the .ico in the resource file, and the MacOS .app folder gets a .icns file, but Linux has no real parallel
+#ifdef BFE_PLAT_LINUX
+    SDL_Surface* icon = IMG_Load("assets/icon.ico");
+    if (icon) {
+        SDL_SetWindowIcon(win->window, icon);
+    }
+    else {
+        std::cerr << "Failed to load icon, window will not have one..." << std::endl;
+    }
+#endif
+
+    // Draw a frame around the emulator. We make the GPU draw into a separate surface that gets composited onto the window.
     SDL_Surface *wind_buf = win->getSurface();
 
     SDL_Rect gameboy_screen_rect;

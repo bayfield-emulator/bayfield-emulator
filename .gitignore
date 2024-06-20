@@ -23,6 +23,7 @@ cputest
 *.a
 *.o
 *.res
+Bayfield
 
 # Hidden FUSE files
 .fuse_hidden*
