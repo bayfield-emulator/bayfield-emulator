@@ -2,7 +2,7 @@
 
 BAYFIELDGB_SRC = src/bayfield_main.cpp src/emu_thread.cpp src/rom_utils.cpp src/clock.cpp src/joypad.cpp
 WIN_REQUIRED_DLLS = libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll SDL2.dll
-STATIC_LIBS = graphics/libgfx.a emucore/libemucore.a
+STATIC_LIBS = graphics/libgfx.a emucore/libemucore.a sound/libsound.a
 CXXFLAGS += -std=c++11 -O2 -Wall
 
 OUTPUT = Bayfield
@@ -42,12 +42,15 @@ fake_emucore:
 fake_gfx:
 	$(MAKE) -C graphics/ libgfx.a
 
-bayfield_gb: fake_emucore fake_gfx $(STATIC_LIBS)
+fake_sound:
+	$(MAKE) -C sound/ libsound.a
+
+bayfield_gb: fake_emucore fake_gfx fake_sound $(STATIC_LIBS)
 ifeq ($(OS),Windows_NT)
 	windres.exe -J rc -O coff -i $(CURDIR)\\meta\\meta.rc -o $(CURDIR)\\meta\\meta.res
-	$(CXX) $(CXXFLAGS) -o $(OUTPUT) $(BAYFIELDGB_SRC) meta/meta.res $(STATIC_LIBS) -Iemucore/ -Igraphics/ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -o $(OUTPUT) $(BAYFIELDGB_SRC) meta/meta.res $(STATIC_LIBS) -Iemucore/ -Igraphics/ -Isound/ $(LDFLAGS)
 else
-	$(CXX) $(CXXFLAGS) -o $(OUTPUT) $(BAYFIELDGB_SRC) $(STATIC_LIBS) -Iemucore/ -Igraphics/ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -o $(OUTPUT) $(BAYFIELDGB_SRC) $(STATIC_LIBS) -Iemucore/ -Igraphics/ -Isound/ $(LDFLAGS)
 endif
 
 clean:
@@ -56,6 +59,7 @@ clean:
 	rm -rf Bayfield.app ||:
 	$(MAKE) -C emucore/ clean
 	$(MAKE) -C graphics/ clean
+	$(MAKE) -C sound/ clean
 
 pack:
 ifeq ($(OS),Windows_NT)

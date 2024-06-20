@@ -58,13 +58,33 @@ void show_simple_info(std::string title, std::string message) {
     return;
 }
 
+SDL_AudioDeviceID init_audio_queue() {
+    SDL_AudioSpec want, have;
+    SDL_AudioDeviceID dev;
+
+    SDL_memset(&want, 0, sizeof(want)); /* or SDL_zero(want) */
+    want.freq = AUDIO_SAMPLERATE;
+    want.format = AUDIO_S16SYS;
+    want.channels = 2;
+    want.samples = 2048;
+    want.callback = NULL;
+
+    dev = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
+    if (dev == 0) {
+        fprintf(stderr, "Failed to open audio: %s\n", SDL_GetError());
+        return 0;
+    } else {
+        return dev;
+    }
+}
+
 int main(int argc, char** args) {
 
     int PROGRAM_SCALE = 3;
     bool DRAW_FRAME = true;
     int GPU_P = 0;
 
-    if (SDL_Init(SDL_INIT_VIDEO)) { // SDL could not initialize
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) { // SDL could not initialize
         show_simple_error("SDL INIT FAILURE", "Could not initialize required SDL subsystems.");
         return 1;
     }
@@ -121,8 +141,11 @@ int main(int argc, char** args) {
         return 1;
     }
 
+    SDL_AudioDeviceID audio_device = init_audio_queue();
     emu_shared_context_t cores;
     memset(&cores, 0, sizeof(emu_shared_context_t));
+
+    cores.audio_device = audio_device;
     init_cores(&cores);
 
     switch (load_rom(&cores, rom_path)) {
@@ -199,6 +222,9 @@ int main(int argc, char** args) {
     }
 
     win->refresh(false);
+    if (audio_device) {
+        SDL_PauseAudioDevice(audio_device, 0);
+    }
     std::thread emulator_thread(emu_thread_go, &cores);
 
     uint32_t vtime = 0;

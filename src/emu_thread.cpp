@@ -8,6 +8,7 @@
 #include "GPU.hpp"
 #include "Window.hpp"
 #include "bayfield.h"
+#include "sound.h"
 
 #define CPU_CLOCKS_PER_SEC 4194304
 #define TICKS_PER_SEC 128
@@ -100,6 +101,21 @@ static uint8_t do_dma_request(bc_cpu_t *cpu, emu_shared_context_t *ctx, uint16_t
     return reg_val;
 }
 
+static void feed_audio(int16_t *samples, size_t length, void *context) {
+    emu_shared_context_t *ctx = (emu_shared_context_t *)context;
+    if (!ctx->audio_device) {
+        return;
+    }
+
+    SDL_QueueAudio(ctx->audio_device, samples, length);
+
+    uint32_t queue_size = SDL_GetQueuedAudioSize(ctx->audio_device);
+    if (queue_size < 4096) {
+        fprintf(stderr, "warning: queued audio samples size suspiciously low: %u (bytes), %u (samples)\n",
+            queue_size, (uint32_t)(queue_size / 2 / sizeof(int16_t)));
+    }
+}
+
 void init_cores(emu_shared_context_t *ctx) {
     SDL_Surface *check = NULL;
     ctx->draw_buffers[0] = check = SDL_CreateRGBSurface(0, 160, 144, 32, 0, 0, 0, 0);
@@ -144,6 +160,11 @@ void init_cores(emu_shared_context_t *ctx) {
     ctx->gpu->set_intr_OAM((gpu_interrupt_handler_t)gpu_interrupt_request_STAT);
     ctx->gpu->set_intr_H_BLANK((gpu_interrupt_handler_t)gpu_interrupt_request_STAT);
     ctx->gpu->set_intr_LYC((gpu_interrupt_handler_t)gpu_interrupt_request_STAT);
+
+    sound_init(&ctx->sound_controller);
+    sound_install_regs(&ctx->sound_controller, (void *)&(ctx->cpu->mem), (snd_mmio_add_observer_t)&bc_mmap_add_mmio_observer);
+    sound_set_volume(&ctx->sound_controller, 8000);
+    sound_set_output(&ctx->sound_controller, AUDIO_SAMPLERATE, (sound_feed_buffer_t)&feed_audio, (void *)ctx);
 }
 
 void release_cores(emu_shared_context_t *ctx) {
@@ -157,8 +178,18 @@ void release_cores(emu_shared_context_t *ctx) {
 static void run_hardware(emu_shared_context_t *ctx, int ncycs) {
     debug_assert(ncycs > 0 && (ncycs % 4) == 0, "Need a multiple of 4 clocks");
     while (ncycs > 0) {
-        bc_cpu_step(ctx->cpu, 16);
-        ctx->gpu->render(16);
+        bc_cpu_step(ctx->cpu, 4);
+        ctx->gpu->render(4);
+        sound_run_controller(&ctx->sound_controller, 1);
+        bc_cpu_step(ctx->cpu, 4);
+        ctx->gpu->render(4);
+        sound_run_controller(&ctx->sound_controller, 1);
+        bc_cpu_step(ctx->cpu, 4);
+        ctx->gpu->render(4);
+        sound_run_controller(&ctx->sound_controller, 1);
+        bc_cpu_step(ctx->cpu, 4);
+        ctx->gpu->render(4);
+        sound_run_controller(&ctx->sound_controller, 1);
         ncycs -= 16;
     }
 }
