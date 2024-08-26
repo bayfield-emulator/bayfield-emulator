@@ -100,11 +100,13 @@ class GPU {
 									 /* LIGHTEST								DARKEST */
 		const uint32_t PALETTE_GR[4] = {0xFF879457, 0xFF547659, 0xFF3B584C, 0xFF223A32}; //authentic green
 		const uint32_t PALETTE_BW[4] = {0xFFFFFFFF, 0xFFB0B0B0, 0xFF686868, 0xFF000000}; //b&w
-		const uint32_t PALETTE_HP[4] = {0xFFF4D58D, 0xFF8D0801, 0xFF708D81, 0xFF001427}; //hope
 		const uint32_t PALETTE_MN[4] = {0xFF544C4E, 0xFF31363D, 0xFF2A2E34, 0xFF0B0C0C}; //midnight
+		const uint32_t PALETTE_LV[4] = {0xFFFFE6E6, 0xFFE1AFD1, 0xFFAD88C6, 0xFF7469B6}; //lavender
+		const uint32_t PALETTE_ER[4] = {0xFFDFD0B8, 0xFF948979, 0xFF3C5B6F, 0xFF153448}; //earth
+		const uint32_t PALETTE_SP[4] = {0xFFFFE6BC, 0xFFE4CDA7, 0xFFC3B091, 0xFF8E806A}; //sepia
 
-		static const int PALETTE_COUNT = 4;
-		const uint32_t* const ALL_PALETTES[PALETTE_COUNT] = {PALETTE_GR, PALETTE_BW, PALETTE_HP, PALETTE_MN};
+		static const int PALETTE_COUNT = 6;
+		const uint32_t* const ALL_PALETTES[PALETTE_COUNT] = {PALETTE_GR, PALETTE_BW, PALETTE_MN, PALETTE_LV, PALETTE_ER, PALETTE_SP};
 
 	public:
 

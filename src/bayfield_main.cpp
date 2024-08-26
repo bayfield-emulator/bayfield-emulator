@@ -80,7 +80,6 @@ SDL_AudioDeviceID init_audio_queue() {
 }
 
 int main(int argc, char** args) {
-
     int PROGRAM_SCALE = 3;
     bool DRAW_FRAME = true;
     int GPU_P = 0;

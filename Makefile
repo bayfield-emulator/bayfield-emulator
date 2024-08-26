@@ -20,6 +20,7 @@ else
 	UNAME_S := $(shell uname -s)
 	LDFLAGS += -lSDL2_image $(shell sdl2-config --libs)
 	PLATFORM = BFE_PLAT_LINUX
+
 	ifeq ($(UNAME_S),Darwin)
 		BAYFIELDGB_SRC += src/file_picker_cocoa.mm
 		LDFLAGS += -framework Cocoa
