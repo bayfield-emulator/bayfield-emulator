@@ -70,47 +70,41 @@ bool joyp_poll(bc_cpu_t *cpu, joyp_t *jpad, SDL_Event *ev) {
 	uint8_t dir_delta = 0;
 	uint8_t but_delta = 0;
 
-	bool wasInputHandled = false;
+	if (ev->key.repeat) return false;
 
-	if (ev->key.repeat) return wasInputHandled;
-
+	bool wasInputHandled = true;
 	switch (ev->key.keysym.sym) {
 		case SDLK_RIGHT:
 			dir_delta |= 0x01;
-			wasInputHandled = true;
 			break;
 		case SDLK_LEFT:
 			dir_delta |= 0x02;
-			wasInputHandled = true;
 			break;
 		case SDLK_UP:
 			dir_delta |= 0x04;
-			wasInputHandled = true;
 			break;
 		case SDLK_DOWN:
 			dir_delta |= 0x08;
-			wasInputHandled = true;
 			break;
 		case SDLK_END:
 			panic("pressed end key");
-			wasInputHandled = true;
 			break;
 
 		case SDLK_z: // i.e. button A
 			but_delta |= 0x01;
-			wasInputHandled = true;
 			break;
 		case SDLK_x: // i.e. button B
 			but_delta |= 0x02;
-			wasInputHandled = true;
 			break;
 		case SDLK_BACKSPACE: // select
 			but_delta |= 0x04;
-			wasInputHandled = true;
 			break;
 		case SDLK_RETURN: // start
 			but_delta |= 0x08;
-			wasInputHandled = true;
+			break;
+		
+		default:
+			wasInputHandled = false;
 			break;
 	}
 
