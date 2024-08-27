@@ -163,7 +163,7 @@ void init_cores(emu_shared_context_t *ctx) {
 
     sound_init(&ctx->sound_controller);
     sound_install_regs(&ctx->sound_controller, (void *)&(ctx->cpu->mem), (snd_mmio_add_observer_t)&bc_mmap_add_mmio_observer);
-    sound_set_volume(&ctx->sound_controller, 8000);
+    sound_set_volume(&ctx->sound_controller, MAX_VOLUME);
     sound_set_output(&ctx->sound_controller, AUDIO_SAMPLERATE, (sound_feed_buffer_t)&feed_audio, (void *)ctx);
 }
 
@@ -208,13 +208,15 @@ void emu_thread_go(emu_shared_context_t *ctx) {
     int64_t step_time2;
 
     while (1) {
+        while (ctx->hold) {
+            usleep(10000);
+        }
+
         step_time = usec_since(0);
 
         run_hardware(ctx, CYCS_PER_TICK);
 
-        if (ctx->stop) {
-            break;
-        }
+        if (ctx->stop) break;
         
         cps += CYCS_PER_TICK;
 

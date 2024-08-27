@@ -8,6 +8,9 @@
 extern "C" {
 #endif
 
+#define MIN_VOLUME 0
+#define MAX_VOLUME 8000
+
 typedef void (*sound_feed_buffer_t)(int16_t *samples, size_t length, void *context);
 
 typedef struct {

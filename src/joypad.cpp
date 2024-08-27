@@ -61,7 +61,7 @@ uint8_t joyp_set_sel(bc_cpu_t *cpu, joyp_t *jpad, uint16_t addr, uint8_t jp_reg)
 * NOTE: This is a temporary function for the main input loop.
 * Still needs to be integrated. It's a little screwy as is.
 */
-void joyp_poll(bc_cpu_t *cpu, joyp_t *jpad, SDL_Event *ev) {
+bool joyp_poll(bc_cpu_t *cpu, joyp_t *jpad, SDL_Event *ev) {
 	enum bc_int_flag interrupt = IF_JOYPAD;
 	// Inverted so 1 = held
 	uint8_t dir_acc = (jpad->direction_state & 0xF) ^ 0xF;
@@ -70,39 +70,48 @@ void joyp_poll(bc_cpu_t *cpu, joyp_t *jpad, SDL_Event *ev) {
 	uint8_t dir_delta = 0;
 	uint8_t but_delta = 0;
 
-	if (ev->key.repeat) {
-		return;
-	}
+	bool wasInputHandled = false;
+
+	if (ev->key.repeat) return wasInputHandled;
 
 	switch (ev->key.keysym.sym) {
-	case SDLK_RIGHT:
-		dir_delta |= 0x01;
-		break;
-	case SDLK_LEFT:
-		dir_delta |= 0x02;
-		break;
-	case SDLK_UP:
-		dir_delta |= 0x04;
-		break;
-	case SDLK_DOWN:
-		dir_delta |= 0x08;
-		break;
-	case SDLK_END:
-		panic("pressed end key");
-		break;
+		case SDLK_RIGHT:
+			dir_delta |= 0x01;
+			wasInputHandled = true;
+			break;
+		case SDLK_LEFT:
+			dir_delta |= 0x02;
+			wasInputHandled = true;
+			break;
+		case SDLK_UP:
+			dir_delta |= 0x04;
+			wasInputHandled = true;
+			break;
+		case SDLK_DOWN:
+			dir_delta |= 0x08;
+			wasInputHandled = true;
+			break;
+		case SDLK_END:
+			panic("pressed end key");
+			wasInputHandled = true;
+			break;
 
-	case SDLK_z: // i.e. button A
-		but_delta |= 0x01;
-		break;
-	case SDLK_x: // i.e. button B
-		but_delta |= 0x02;
-		break;
-	case SDLK_BACKSPACE: // select
-		but_delta |= 0x04;
-		break;
-	case SDLK_RETURN: // start
-		but_delta |= 0x08;
-		break;
+		case SDLK_z: // i.e. button A
+			but_delta |= 0x01;
+			wasInputHandled = true;
+			break;
+		case SDLK_x: // i.e. button B
+			but_delta |= 0x02;
+			wasInputHandled = true;
+			break;
+		case SDLK_BACKSPACE: // select
+			but_delta |= 0x04;
+			wasInputHandled = true;
+			break;
+		case SDLK_RETURN: // start
+			but_delta |= 0x08;
+			wasInputHandled = true;
+			break;
 	}
 
 	// Set/clear changed flag in acc
@@ -118,4 +127,6 @@ void joyp_poll(bc_cpu_t *cpu, joyp_t *jpad, SDL_Event *ev) {
 	if (joyp_set(jpad, dir_acc ^ 0xF, but_acc ^ 0xF)) {
 		bc_request_interrupt(cpu, interrupt);
 	}
+
+	return wasInputHandled;
 }

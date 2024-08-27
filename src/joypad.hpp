@@ -27,4 +27,4 @@ int joyp_set(joyp_t *jpad, uint8_t direction, uint8_t buttons);
    Used to select column.*/
 uint8_t joyp_get_state(bc_cpu_t *cpu, joyp_t *jpad, uint16_t addr, uint8_t jp_reg);
 uint8_t joyp_set_sel(bc_cpu_t *cpu, joyp_t *jpad, uint16_t addr, uint8_t jp_reg);
-void joyp_poll(bc_cpu_t *cpu, joyp_t *joypad, SDL_Event *key);
+bool joyp_poll(bc_cpu_t *cpu, joyp_t *joypad, SDL_Event *key);

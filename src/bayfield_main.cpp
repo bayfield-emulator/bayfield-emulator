@@ -259,7 +259,30 @@ int main(int argc, char** args) {
         switch(e.type) {
         case SDL_KEYDOWN: // key press
         case SDL_KEYUP: // key release
-            joyp_poll(cores.cpu, &cores.joypad, &e);
+            if (!joyp_poll(cores.cpu, &cores.joypad, &e)) {
+                // handle additional input if it was not intended for the gamepad
+                if (e.type == SDL_KEYDOWN && !e.key.repeat) {
+                    switch (e.key.keysym.sym) {
+                        case SDLK_ESCAPE:
+                            quit = true;
+                            break;
+                        case SDLK_SPACE:
+                            cores.hold = !cores.hold;
+                            break;
+                        case SDLK_0 ... SDLK_9:
+                            cores.gpu->choose_palette(e.key.keysym.sym - SDLK_1);
+                            break;
+                        case SDLK_m:
+                            {
+                                bool muted = cores.sound_controller.reference_volume == 0;
+                                sound_set_volume(&cores.sound_controller, muted ? MAX_VOLUME : MIN_VOLUME);
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
             break;
         case SDL_QUIT: // main window sent close command
             quit = true;
