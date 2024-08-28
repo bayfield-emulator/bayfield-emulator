@@ -30,7 +30,7 @@ else
 			LDFLAGS = $(shell sdl2-config --static-libs)
 		endif
 	else
-		BAYFIELDGB_SRC += src/file_picker_zenity.cpp
+		BAYFIELDGB_SRC += src/file_picker_linux.cpp
 	endif
 endif
 
