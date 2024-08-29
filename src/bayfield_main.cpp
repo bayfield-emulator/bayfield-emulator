@@ -265,6 +265,7 @@ int main(int argc, char** args) {
                     switch (e.key.keysym.sym) {
                         case SDLK_ESCAPE:
                             quit = true;
+                            cores.hold = false;
                             break;
                         case SDLK_SPACE:
                             cores.hold = !cores.hold;
@@ -286,6 +287,7 @@ int main(int argc, char** args) {
             break;
         case SDL_QUIT: // main window sent close command
             quit = true;
+            cores.hold = false;
             break;
         default:
             break;
